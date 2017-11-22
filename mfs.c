@@ -125,7 +125,9 @@ int main()
 
     }
 
+    // DEBUG
     else if (strcmp(token[0], "exit") == 0) {
+      fclose(IMG);
       return 0;
     } 
 
@@ -142,10 +144,7 @@ FILE* openFile(char *fileName){
     printf("Error: File system image not found.\n");
     return 0;
   }
-  // Testing
-  fseek(file, 2, SEEK_SET);
-  fscanf(file, "%s", buff);
-  printf("%s\n", buff);
-
+  // Move to the beginning of the file and return
+  fseek(file, 0, SEEK_SET);
   return file;
 }
