@@ -98,10 +98,9 @@ int main()
       // assuming that the second argument
       // is the file for now
       IMG = openFile(token[1]);
-      // we move to the beginning of the file 
     }
     else if ( strcmp(token[0], "close") == 0){
-      
+      int fclose(IMG);
     }
     else if ( strcmp(token[0], "info") == 0){
     
