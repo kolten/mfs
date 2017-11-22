@@ -43,8 +43,8 @@ FILE* openFile(char *fileName);
 
 int main()
 {
-
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
+  char * currentFile = NULL;
 
   while( 1 )
   {
@@ -95,10 +95,18 @@ int main()
       
     }
     else if ( strcmp(token[0], "open") == 0){
-      // assuming that the second argument
-      // is the file for now
-      IMG = openFile(token[1]);
-      // we move to the beginning of the file 
+      if(currentFile == NULL){
+        IMG = openFile(token[1]);
+        // we have an open file, set it as our current file
+        if(IMG != NULL){
+          currentFile = (char *)malloc(sizeof(token[1]));
+          strcpy(currentFile, token[1]);
+        }
+      }else{
+        if(strcmp(currentFile, token[1]) == 0){
+          printf("Error: File system image is already open.\n");
+        }
+      }
     }
     else if ( strcmp(token[0], "close") == 0){
       
