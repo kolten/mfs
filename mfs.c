@@ -43,8 +43,11 @@ FILE* openFile(char *fileName);
 
 int main()
 {
-
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
+  char * currentFile = NULL;
+  int hasFileClosed = 0;
+  //Creating file pointer
+  FILE *IMG = NULL;
 
   while( 1 )
   {
@@ -86,25 +89,45 @@ int main()
         token_count++;
     }
 
-    //Creating file pointer
-    FILE *IMG, test;
-
     // Checking first token to carry out
     // which required functionality
     if ( token[0] == NULL){
       
     }
     else if ( strcmp(token[0], "open") == 0){
-      // assuming that the second argument
-      // is the file for now
-      IMG = openFile(token[1]);
+      if(currentFile == NULL && IMG == NULL){
+        IMG = openFile(token[1]);
+        // we have an open file, set it as our current file
+        if(IMG != NULL){
+          currentFile = (char *)malloc(sizeof(token[1]));
+          strcpy(currentFile, token[1]);
+        }
+      }else{
+        if(strcmp(currentFile, token[1]) == 0){
+          printf("Error: File system image is already open.\n");
+        }
+      }
     }
     else if ( strcmp(token[0], "close") == 0){
-      int fclose(IMG);
+      // 0 is success
+      // -1 is failed
+      // If the file pointer is not null
+      if(IMG != NULL){
+        int res = fclose(IMG);
+        printf("%d\n", res);
+        if(res == 0){
+          // Reset the current filename && file pointer to null
+          currentFile = NULL;
+          IMG = NULL;
+          // Set a flag for checking on other operations
+        }
+      }else{
+        printf("%s\n", "Error: File system not open.");
+      }
     }
-    else if ( strcmp(token[0], "info") == 0){
-    
-	}
+    else if (strcmp(token[0], "info") == 0){
+      
+	  }
     else if (strcmp(token[0], "stat") == 0){
       
     }
@@ -124,7 +147,10 @@ int main()
 
     }
 
+    // DEBUG
     else if (strcmp(token[0], "exit") == 0) {
+      fclose(IMG);
+      free(IMG);
       return 0;
     } 
 
@@ -136,15 +162,11 @@ int main()
 
 FILE* openFile(char *fileName){
   FILE *file;
-  char *buff[255];
   if(!(file=fopen(fileName, "r"))){
     printf("Error: File system image not found.\n");
     return 0;
   }
-  // Testing
-  fseek(file, 2, SEEK_SET);
-  fscanf(file, "%s", buff);
-  printf("%s\n", buff);
-
+  // Move to the beginning of the file and return
+  fseek(file, 0, SEEK_SET);
   return file;
 }
