@@ -47,7 +47,7 @@ int main()
   while( 1 )
   {
     // Print out the msh prompt
-    printf ("msh> ");
+    printf ("mfs> ");
 
     // Read the command from the commandline.  The
     // maximum command that will be read is MAX_COMMAND_SIZE
@@ -86,12 +86,7 @@ int main()
 
     // Now print the tokenized input as a debug check
     // \TODO Remove this code and replace with your shell functionality
-
-    int token_index  = 0;
-    for( token_index = 0; token_index < token_count; token_index ++ ) 
-    {
-      printf("token[%d] = %s\n", token_index, token[token_index] );  
-    }
+    
 
     free( working_root );
 
