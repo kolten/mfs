@@ -39,6 +39,8 @@
 
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports five arguments
 
+FILE* openFile(char *fileName);
+
 int main()
 {
 
@@ -84,13 +86,19 @@ int main()
         token_count++;
     }
 
-    // Now print the tokenized input as a debug check
-    // \TODO Remove this code and replace with your shell functionality
+    //Creating file pointer
+    FILE *IMG, test;
+
+    // Checking first token to carry out
+    // which required functionality
     if ( token[0] == NULL){
       
     }
     else if ( strcmp(token[0], "open") == 0){
-      
+      // assuming that the second argument
+      // is the file for now
+      IMG = openFile(token[1]);
+      // we move to the beginning of the file 
     }
     else if ( strcmp(token[0], "close") == 0){
       
@@ -117,7 +125,27 @@ int main()
 
     }
 
+    else if (strcmp(token[0], "exit") == 0) {
+      return 0;
+    } 
+
     free( working_root );
   }
   return 0;
+}
+
+
+FILE* openFile(char *fileName){
+  FILE *file;
+  char *buff[255];
+  if(!(file=fopen(fileName, "r"))){
+    printf("Error: File system image not found.\n");
+    return 0;
+  }
+  // Testing
+  fseek(file, 2, SEEK_SET);
+  fscanf(file, "%s", buff);
+  printf("%s\n", buff);
+
+  return file;
 }
