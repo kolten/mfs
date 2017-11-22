@@ -86,10 +86,38 @@ int main()
 
     // Now print the tokenized input as a debug check
     // \TODO Remove this code and replace with your shell functionality
-    
+    if ( token[0] == NULL){
+      
+    }
+    else if ( strcmp(token[0], "open") == 0){
+      
+    }
+    else if ( strcmp(token[0], "close") == 0){
+      
+    }
+    else if ( strcmp(token[0], "info") == 0){
+      return 0;
+    }
+    else if (strcmp(token[0], "stat") == 0){
+      
+    }
+    else if (strcmp(token[0], "get") == 0){
+     
+    }
+    else if (strcmp(token[0], "cd") == 0) {
+     
+    }
+    else if (strcmp(token[0], "ls") == 0) {
+     
+    }
+    else if (strcmp(token[0], "read") == 0) {
+
+    }
+    else if (strcmp(token[0], "volume") == 0) {
+
+    }
 
     free( working_root );
-
   }
   return 0;
 }
