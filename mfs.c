@@ -96,8 +96,8 @@ int main()
       
     }
     else if ( strcmp(token[0], "info") == 0){
-      return 0;
-    }
+    
+	}
     else if (strcmp(token[0], "stat") == 0){
       
     }
