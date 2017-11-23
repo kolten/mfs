@@ -160,11 +160,11 @@ int main()
     }
     else if (strcmp(token[0], "info") == 0){
       if(IMG != NULL){
-        printf("%d %x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
-        printf("%d %x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
-        printf("%d %x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
-        printf("%d %x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
-        printf("%d %x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
+        printf("%d %6x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
+        printf("%d %6x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
+        printf("%d %6x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
+        printf("%d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
+        printf("%d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
       }else{
         printf("%s\n", "Error: File system not open.");
       }
