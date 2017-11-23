@@ -79,7 +79,7 @@ int main()
   struct DirectoryEntry dir[16];
 
   // Create a single instance of image struct
-  struct FAT32 *image = malloc(sizeof(struct FAT32));
+  struct FAT32 *fat = malloc(sizeof(struct FAT32));
 
   while( 1 )
   {
@@ -129,7 +129,7 @@ int main()
 
     else if ( strcmp(token[0], "open") == 0){
       if(currentFile == NULL && IMG == NULL){
-        IMG = openFile(token[1], image);
+        IMG = openFile(token[1], fat);
         // we have an open file, set it as our current file
         if(IMG != NULL){
           currentFile = (char *)malloc(sizeof(token[1]));
@@ -159,7 +159,12 @@ int main()
       }
     }
     else if (strcmp(token[0], "info") == 0){
-      
+      printf("%d %x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
+      printf("%d %x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
+      printf("%d %x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
+      printf("%d %x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
+      printf("%d %x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
+
 	  }
     else if (strcmp(token[0], "stat") == 0){
       
@@ -198,33 +203,39 @@ FILE* openFile(char *fileName, struct FAT32 *img){
     return 0;
   }
 
-  // We have the file reading in,
+  // We have the file reading
   // Set all values of BPB Structure
   // ...this could be a lot cleaner.
   // 1. BPB_BytsPerSec, at offset 11
   fseek(file, 11, SEEK_SET);
   // read the value into the pointer to the struct
   fread(&img->BPB_BytsPerSec, 2, 1, file);
-  
+  // DEBUG - delete before turning in
+  // printf("%d %x\n", img->BPB_BytsPerSec, img->BPB_BytsPerSec);
   // 2. BPB_SecPerClus, at offset 13
   fseek(file, 13, SEEK_SET);
   // ...repeat
   fread(&img->BPB_SecPerClus, 1, 1, file);
-  
+  // DEBUG - delete before turning in
+  // printf("%d %x\n", img->BPB_SecPerClus, img->BPB_SecPerClus);
   // 3. BPB_RsvdSecCnt, at offset 14
   fseek(file, 14, SEEK_SET);
   // ...repeat
   fread(&img->BPB_RsvdSecCnt, 2, 1, file);
-  
+  // DEBUG - delete before turning in
+  // printf("%d %x\n", img->BPB_RsvdSecCnt, img->BPB_RsvdSecCnt);
   // 4. BPB_NumFATs, at offset 16
   fseek(file, 16, SEEK_SET);
   // ...repeat
   fread(&img->BPB_NumFATS, 1, 1, file);
-  
+  // DEBUG - delete before turning in
+  // printf("%d %x\n", img->BPB_NumFATS, img->BPB_NumFATS);
   // 5. BPB_FATSz32, at offset 36
   fseek(file, 36, SEEK_SET);
   // ...repeat
   fread(&img->BPB_FATSz32, 4, 1, file);
+  // DEBUG - delete before turning in
+  // printf("%d %x\n", img->BPB_FATSz32, img->BPB_FATSz32);
 
   // ...Others we didn't cover in class?
   // BS_OEMNAME
