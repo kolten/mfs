@@ -43,30 +43,34 @@ struct __attribute__((__packed__)) DirectoryEntry {
   char DIR_Name[11];
   uint8_t DIR_Attr;
   uint8_t Unused1[8];
-  uint16_t DIR_FirstCluserHigh;
+  uint16_t DIR_FirstClusterHigh;
   uint8_t Unused2[4];
-  uint16_t DIR_FirstCluserLow;
+  uint16_t DIR_FirstClusterLow;
   uint32_t DIR_FileSize;
 };
 
 // From fat32 pdf
 struct FAT32 {
   char BS_OEMNAME[8];
-  int16_t BPB_BytsPerSec;
-  int8_t BPB_SecPerClus;
-  int16_t BPB_RsvdSecCnt;
-  int8_t BPB_NumFATS;
-  int16_t BPB_RootEntCnt;
+  short BPB_BytsPerSec; // short
+  unsigned BPB_SecPerClus;
+  short BPB_RsvdSecCnt;
+  unsigned BPB_NumFATS;
+  short BPB_RootEntCnt;
   char BS_VolLab[11];
-  int32_t BPB_FATSz32;
-  int32_t BPB_RootClus;
+  int BPB_FATSz32;
+  int BPB_RootClus;
 
-  int32_t RootDirSectors;
-  int32_t FirstDataSector;
-  int32_t FirstSectorofCluser;
+  int RootDirSectors;
+  int FirstDataSector;
+  int FirstSectorofCluser;
+
+  // storing our root offset
+  int root_offset;
 };
 
 FILE* openFile(char *fileName, struct FAT32 *img);
+void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
 
 int main()
 {
@@ -76,7 +80,7 @@ int main()
   //Creating file pointer
   FILE *IMG = NULL;
 
-  struct DirectoryEntry dir[16];
+  struct DirectoryEntry *dir = malloc(16 * sizeof(struct DirectoryEntry));
 
   // Create a single instance of image struct
   struct FAT32 *fat = malloc(sizeof(struct FAT32));
@@ -160,11 +164,12 @@ int main()
     }
     else if (strcmp(token[0], "info") == 0){
       if(IMG != NULL){
-        printf("%d %6x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
-        printf("%d %6x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
-        printf("%d %6x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
-        printf("%d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
-        printf("%d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
+        printf("BPB_BytsPerSec:%6d %6x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
+        printf("BPB_SecPerClus:%6d %6x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
+        printf("BPB_RsvdSecCnt:%6d %6x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
+        printf("BPB_NumFATS:%9d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
+        printf("BPB_FATSz32:%9d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
+        printf("%d\n", fat->root_offset);
       }else{
         printf("%s\n", "Error: File system not open.");
       }
@@ -179,7 +184,11 @@ int main()
      
     }
     else if (strcmp(token[0], "ls") == 0) {
-     
+     if(IMG != NULL){
+       ls(IMG, fat, dir);
+     }else{
+        printf("%s\n", "Error: File system not open.");
+      }
     }
     else if (strcmp(token[0], "read") == 0) {
 
@@ -261,6 +270,31 @@ FILE* openFile(char *fileName, struct FAT32 *img){
   img->RootDirSectors = 0;
   img->FirstDataSector = 0;
   img->FirstSectorofCluser = 0;
+  // Root Directory Address
+  img->root_offset = (img->BPB_NumFATS * img->BPB_FATSz32 * img->BPB_BytsPerSec) + (img->BPB_RsvdSecCnt * img->BPB_BytsPerSec);
 
   return file;
+}
+
+void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
+  // Seek in the file where the root address is
+  fseek(file, fat->root_offset, SEEK_SET);
+  int i = 0;
+  // fread 32 bytes into the directory entry array
+  for(i=0; i<16; i++){
+    fread(&dir[i], 32, 1, file);
+  }
+
+  // loop and print the subdirectory files and
+  // files with the archive flag
+  for(i=0; i < 16; i++){
+    if(dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20){
+      // temp char array for name
+      char fileName[12];
+      memset(fileName, 0, 12);
+      strncpy(fileName, dir[i].DIR_Name, 11);
+      printf("%2s %6d %6d\n", fileName, dir[i].DIR_FileSize, dir[i].DIR_FirstClusterHigh);
+    }
+  }
+
 }
