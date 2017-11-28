@@ -198,7 +198,11 @@ int main()
 
     }
     else if (strcmp(token[0], "volume") == 0) {
-
+      if(IMG != NULL){
+        //
+      }else {
+        printf("%s\n", "Error: volume name not found.")
+      }
     }
     
     // DEBUG - delete before turning in
