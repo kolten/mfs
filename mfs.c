@@ -69,6 +69,10 @@ struct FAT32 {
   int root_offset;
 };
 
+// Helper functions
+int LBAToOffset(int sector, struct FAT32 *fat);
+unsigned NextLB(int sector, FILE *file, struct FAT32 *fat);
+
 FILE* openFile(char *fileName, struct FAT32 *img);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
 
@@ -296,5 +300,16 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
       printf("%2s %6d %6d\n", fileName, dir[i].DIR_FileSize, dir[i].DIR_FirstClusterHigh);
     }
   }
+}
 
+int LBAToOffset(int sector, struct FAT32 *fat){
+  return ((sector - 2) * fat->BPB_BytsPerSec) + (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (fat->BPB_NumFATS * fat->BPB_FATSz32 * fat->BPB_BytsPerSec);
+}
+
+unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
+  int FATAddress = (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (sector * 4);
+  unsigned val;
+  fseek(file, FATAddress, SEEK_SET);
+  fread(&val, 2, 1, file);
+  return val;
 }
