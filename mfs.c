@@ -75,7 +75,7 @@ unsigned NextLB(int sector, FILE *file, struct FAT32 *fat);
 
 FILE* openFile(char *fileName, struct FAT32 *img);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
-
+void readOp(FILE *file, struct FAT32 *fat, int position, char *filename, int numOfBytes);
 int main()
 {
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
@@ -195,13 +195,22 @@ int main()
       }
     }
     else if (strcmp(token[0], "read") == 0) {
+      int position;
+      char *filename;
+      int numOfBytes;
 
+      filename = (char *)malloc(sizeof(token[1]));
+      filename = token[1];
+      position = atoi(token[2]);
+      numOfBytes = atoi(token[3]);
+
+      // readOp(IMG, fat, position, filename, numOfBytes);
     }
     else if (strcmp(token[0], "volume") == 0) {
       if(IMG != NULL){
         //
       }else {
-        printf("%s\n", "Error: volume name not found.")
+        printf("%s\n", "Error: volume name not found.");
       }
     }
     
@@ -222,7 +231,6 @@ FILE* openFile(char *fileName, struct FAT32 *img){
     printf("Error: File system image not found.\n");
     return 0;
   }
-
   // We have the file reading
   // Set all values of BPB Structure
   // ...this could be a lot cleaner.
@@ -281,6 +289,7 @@ FILE* openFile(char *fileName, struct FAT32 *img){
   // Root Directory Address
   img->root_offset = (img->BPB_NumFATS * img->BPB_FATSz32 * img->BPB_BytsPerSec) + (img->BPB_RsvdSecCnt * img->BPB_BytsPerSec);
 
+  // return a file pointer
   return file;
 }
 
@@ -304,6 +313,10 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
       printf("%2s %6d %6d\n", fileName, dir[i].DIR_FileSize, dir[i].DIR_FirstClusterHigh);
     }
   }
+}
+
+void readOp(FILE *file, struct FAT32 *fat, int position, char *filename, int numOfBytes){
+  
 }
 
 int LBAToOffset(int sector, struct FAT32 *fat){
