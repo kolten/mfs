@@ -73,7 +73,7 @@ struct FAT32 {
 int LBAToOffset(int sector, struct FAT32 *fat);
 unsigned NextLB(int sector, FILE *file, struct FAT32 *fat);
 
-FILE* openFile(char *fileName, struct FAT32 *img);
+FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
 void readOp(FILE *file, struct FAT32 *fat, int position, char *filename, int numOfBytes);
 int main()
@@ -137,7 +137,7 @@ int main()
 
     else if ( strcmp(token[0], "open") == 0){
       if(currentFile == NULL && IMG == NULL){
-        IMG = openFile(token[1], fat);
+        IMG = openFile(token[1], fat, dir);
         // we have an open file, set it as our current file
         if(IMG != NULL){
           currentFile = (char *)malloc(sizeof(token[1]));
@@ -182,7 +182,10 @@ int main()
       
     }
     else if (strcmp(token[0], "get") == 0){
-     
+     int i = 0;
+     for(i = 0; i < 16; i++){
+       printf("%x\n", dir[i].DIR_Name[0]);
+     }
     }
     else if (strcmp(token[0], "cd") == 0) {
      
@@ -208,7 +211,8 @@ int main()
     }
     else if (strcmp(token[0], "volume") == 0) {
       if(IMG != NULL){
-        //
+        printf("%s\n", fat->BS_VolLab);
+        
       }else {
         printf("%s\n", "Error: volume name not found.");
       }
@@ -225,7 +229,7 @@ int main()
 }
 
 
-FILE* openFile(char *fileName, struct FAT32 *img){
+FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   FILE *file;
   if(!(file=fopen(fileName, "r"))){
     printf("Error: File system image not found.\n");
@@ -289,21 +293,22 @@ FILE* openFile(char *fileName, struct FAT32 *img){
   // Root Directory Address
   img->root_offset = (img->BPB_NumFATS * img->BPB_FATSz32 * img->BPB_BytsPerSec) + (img->BPB_RsvdSecCnt * img->BPB_BytsPerSec);
 
-  // return a file pointer
-  return file;
-}
-
-void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
-  // Seek in the file where the root address is
-  fseek(file, fat->root_offset, SEEK_SET);
+// Seek in the file where the root address is
+// loop and print the subdirectory files and
+  fseek(file, img->root_offset, SEEK_SET);
   int i = 0;
   // fread 32 bytes into the directory entry array
   for(i=0; i<16; i++){
     fread(&dir[i], 32, 1, file);
   }
 
-  // loop and print the subdirectory files and
+  // return a file pointer
+  return file;
+}
+
+void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   // files with the archive flag
+  int i = 0;
   for(i=0; i < 16; i++){
     if(dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20){
       // temp char array for name
