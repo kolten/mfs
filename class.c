@@ -82,6 +82,7 @@ int main(){
 
   // // read NUM.txt. 513 1
   // int user_offset = 513;
+  // DIR_FirstCluserLow 
   // int block = 7216;
   // while ( user_offset > BPB_BytsPerSec) 
   // {

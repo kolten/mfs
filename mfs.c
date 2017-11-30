@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <ctype.h>
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
                                 // so we need to define what delimits our tokens.
@@ -72,6 +73,7 @@ struct FAT32 {
 // Helper functions
 int LBAToOffset(int sector, struct FAT32 *fat);
 unsigned NextLB(int sector, FILE *file, struct FAT32 *fat);
+char* formatFileString(char* userInput);
 
 FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
@@ -179,7 +181,9 @@ int main()
       }
 	  }
     else if (strcmp(token[0], "stat") == 0){
-      
+      char *clean = NULL;
+      clean = formatFileString(token[1]);
+      printf("%s\n", clean);
     }
     else if (strcmp(token[0], "get") == 0){
      int i = 0;
@@ -206,7 +210,7 @@ int main()
       filename = token[1];
       position = atoi(token[2]);
       numOfBytes = atoi(token[3]);
-
+      
       // readOp(IMG, fat, position, filename, numOfBytes);
     }
     else if (strcmp(token[0], "volume") == 0) {
@@ -334,4 +338,67 @@ unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
   fseek(file, FATAddress, SEEK_SET);
   fread(&val, 2, 1, file);
   return val;
+}
+
+// sanitizer user input to match FAT file system spec
+char* formatFileString(char* userInput) {
+  char copyOfUser[strlen(userInput)];
+  // Create a copy to tokenize so we
+  // don't change the pointer
+  strcpy(copyOfUser, userInput);
+  char *filename;
+  char *extension;
+  char *token;
+  char *toFATStr;
+  int numOfSpaces;
+  int numOfExtSpaces;
+  char * del = ".\n";
+  // malloc the str to compare to the file system
+  // 11 bytes total
+  toFATStr = (char*)malloc(sizeof(char) * 11);
+  
+  token = strtok(copyOfUser,del);
+  filename = (char *)malloc(sizeof(token));
+  strcpy(filename, token);
+
+  if((token = strtok(NULL, del)) != NULL){
+    extension = (char *)malloc(sizeof(token));
+    strcpy(extension, token);
+  }
+  
+  // 8 bytes in a file name, take the range
+  int lenOfFilename = strlen(filename);
+  int lenOfExtension = strlen(extension);
+  numOfSpaces = 8 - lenOfFilename;
+  numOfExtSpaces = 3 - lenOfExtension;
+
+  // Concat the file name to our str
+  strcat(toFATStr, filename);
+
+  // if we have to append spaces
+  if(numOfSpaces > 0){
+    int i = 0;
+    // concat spaces to match fat spec
+    for(i = 0; i < numOfSpaces; i++){
+      strcat(toFATStr, " ");
+    }
+  }
+  
+  // then concat file extension
+  strcat(toFATStr, extension);
+
+  if(numOfExtSpaces > 0){
+    int i = 0;
+    // concat spaces to match fat spec
+    for(i = 0; i < numOfExtSpaces; i++){
+      strcat(toFATStr, " ");
+    }
+  }
+  // turn the toFATStr to all caps
+  int i = 0;
+  for(i = 0; i < strlen(toFATStr); i++){
+    toFATStr[i] = toupper(toFATStr[i]);
+  }
+
+  return toFATStr;
 }
