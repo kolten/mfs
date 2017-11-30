@@ -64,20 +64,25 @@ struct FAT32 {
 
   int RootDirSectors;
   int FirstDataSector;
-  int FirstSectorofCluser;
+  int FirstSectorofCluster;
 
   // storing our root offset
   int root_offset;
+  int TotalFATSize;
+  int bytesPerCluster;
 };
 
 // Helper functions
 int LBAToOffset(int sector, struct FAT32 *fat);
 unsigned NextLB(int sector, FILE *file, struct FAT32 *fat);
 char* formatFileString(char* userInput);
+int fileDoesExist(struct DirectoryEntry *dir, char* filename);
 
 FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
 void readOp(FILE *file, struct FAT32 *fat, int position, char *filename, int numOfBytes);
+void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName);
+
 int main()
 {
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
@@ -181,9 +186,13 @@ int main()
       }
 	  }
     else if (strcmp(token[0], "stat") == 0){
-      char *clean = NULL;
-      clean = formatFileString(token[1]);
-      printf("%s\n", clean);
+      if(IMG != NULL){
+        char *clean = NULL;
+        clean = formatFileString(token[1]);
+        stat(dir, IMG, clean);
+      }else{
+        printf("%s\n", "Error: File system not open.");
+      }
     }
     else if (strcmp(token[0], "get") == 0){
      int i = 0;
@@ -202,15 +211,22 @@ int main()
       }
     }
     else if (strcmp(token[0], "read") == 0) {
+      // TODO: Check if tokens are correct, more defensive programming
+      // Might make another func to help with so
       int position;
-      char *filename;
       int numOfBytes;
-
-      filename = (char *)malloc(sizeof(token[1]));
-      filename = token[1];
+      char *cleanFileName = NULL;
+      cleanFileName = formatFileString(token[1]);
       position = atoi(token[2]);
       numOfBytes = atoi(token[3]);
-      
+      int fileIndex;
+      if(IMG != NULL){
+        if((fileIndex = fileDoesExist(dir, cleanFileName)) != -1){
+          // We now have the index of the file in the directory structure
+        }else{
+          printf("%s\n", "File not found.");
+        }
+      }      
       // readOp(IMG, fat, position, filename, numOfBytes);
     }
     else if (strcmp(token[0], "volume") == 0) {
@@ -293,12 +309,13 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   // Defaults from pdf
   img->RootDirSectors = 0;
   img->FirstDataSector = 0;
-  img->FirstSectorofCluser = 0;
+  img->FirstSectorofCluster =  0;
   // Root Directory Address
   img->root_offset = (img->BPB_NumFATS * img->BPB_FATSz32 * img->BPB_BytsPerSec) + (img->BPB_RsvdSecCnt * img->BPB_BytsPerSec);
+  img->bytesPerCluster = (img->BPB_SecPerClus * img->BPB_BytsPerSec);
 
-// Seek in the file where the root address is
-// loop and print the subdirectory files and
+  // Seek in the file where the root address is
+  // loop and print the subdirectory files and
   fseek(file, img->root_offset, SEEK_SET);
   int i = 0;
   // fread 32 bytes into the directory entry array
@@ -328,6 +345,21 @@ void readOp(FILE *file, struct FAT32 *fat, int position, char *filename, int num
   
 }
 
+void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
+  int fileIndex;
+  if((fileIndex = fileDoesExist(dir, userFileName)) != -1){
+    // Print out more information
+    // TODO
+    printf("%d %d\n", dir[fileIndex].DIR_FileSize, dir[fileIndex].DIR_FirstClusterLow);
+  }else{
+    printf("%s\n", "File not found.");
+  }
+}
+
+
+/*
+* Helper functions
+*/
 int LBAToOffset(int sector, struct FAT32 *fat){
   return ((sector - 2) * fat->BPB_BytsPerSec) + (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (fat->BPB_NumFATS * fat->BPB_FATSz32 * fat->BPB_BytsPerSec);
 }
@@ -401,4 +433,20 @@ char* formatFileString(char* userInput) {
   }
 
   return toFATStr;
+}
+
+int fileDoesExist(struct DirectoryEntry *dir, char* filename){
+  int i = 0;
+  for(i=0; i < 16; i++){
+    if(dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20){
+      // temp char array for name
+      char dirFileName[12];
+      memset(dirFileName, 0, 12);
+      strncpy(dirFileName, dir[i].DIR_Name, 11);
+      if(strcasecmp(dirFileName, filename) == 0){
+        return i; // return the index to provide a faster access
+      }
+    }
+  }
+  return -1; // it doesnt exist
 }
