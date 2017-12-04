@@ -80,8 +80,9 @@ int fileDoesExist(struct DirectoryEntry *dir, char* filename);
 
 FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
-void readOp(FILE *file, struct FAT32 *fat, int position, char *filename, int numOfBytes);
 void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName);
+void get(FILE *file, struct DirectoryEntry *dir, char* userCleanName, char* userOriginalName);
+void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes);
 
 int main()
 {
@@ -195,10 +196,13 @@ int main()
       }
     }
     else if (strcmp(token[0], "get") == 0){
-     int i = 0;
-     for(i = 0; i < 16; i++){
-       printf("%x\n", dir[i].DIR_Name[0]);
-     }
+     if(IMG != NULL){
+        char *clean = NULL;
+        clean = formatFileString(token[1]);
+        get(IMG, dir, clean, token[1]);
+      }else{
+        printf("%s\n", "Error: File system not open.");
+      }
     }
     else if (strcmp(token[0], "cd") == 0) {
      
@@ -213,16 +217,19 @@ int main()
     else if (strcmp(token[0], "read") == 0) {
       // TODO: Check if tokens are correct, more defensive programming
       // Might make another func to help with so
-      int position;
+      int offset;
       int numOfBytes;
       char *cleanFileName = NULL;
+      // read NUM.txt. 513 1
       cleanFileName = formatFileString(token[1]);
-      position = atoi(token[2]);
+      offset = atoi(token[2]);
       numOfBytes = atoi(token[3]);
       int fileIndex;
       if(IMG != NULL){
         if((fileIndex = fileDoesExist(dir, cleanFileName)) != -1){
           // We now have the index of the file in the directory structure
+          // printf("dir.DIR_FirstClusterLow: %d\n", dir[fileIndex].DIR_FirstClusterLow);
+          readFile(IMG, fat, dir[fileIndex], offset, numOfBytes);
         }else{
           printf("%s\n", "File not found.");
         }
@@ -327,6 +334,31 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   return file;
 }
 
+void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes){
+  int user_offset = offset;
+  int block = dir.DIR_FirstClusterLow;
+  //printf("block: %d", block);
+  int value;
+
+  while( user_offset > fat->BPB_BytsPerSec){
+    block = NextLB(block, file, fat);
+    user_offset -= (fat->BPB_BytsPerSec);
+    //printf("block:%2d, user_offset:%2d\n", block, user_offset);
+  }
+
+  int file_offset = LBAToOffset(block, fat);
+  printf("file_offset:%d\n", file_offset);
+  fseek(file, file_offset + user_offset, SEEK_SET);
+  fread(&value, numOfBytes, 1, file);
+  printf("%d\n", value);
+  int i = 0;
+  // TODO
+  for(i = 1; i < 10; i++){
+    fread(&value, 1, 1, file);
+    printf("%d\n", value);
+  }
+}
+
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   // files with the archive flag
   int i = 0;
@@ -341,16 +373,32 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   }
 }
 
-void readOp(FILE *file, struct FAT32 *fat, int position, char *filename, int numOfBytes){
-  
-}
-
 void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
   int fileIndex;
   if((fileIndex = fileDoesExist(dir, userFileName)) != -1){
     // Print out more information
     // TODO
     printf("%d %d\n", dir[fileIndex].DIR_FileSize, dir[fileIndex].DIR_FirstClusterLow);
+  }else{
+    printf("%s\n", "File not found.");
+  }
+}
+
+void get(FILE *file, struct DirectoryEntry *dir, char* userCleanName, char* userOriginalName){
+  // fseek to that to either high or low cluster
+  // fread by the size of the file
+  // open a new file pointer to our system
+  // write the file using fwrite?
+  int fileIndex;
+  // check if the file given exists
+  if((fileIndex = fileDoesExist(dir, userCleanName)) != -1){
+    // if it does
+    FILE *localFile;
+    localFile = fopen(userOriginalName, "w");
+    printf("%x %x\n", dir[fileIndex].DIR_FirstClusterLow, dir[fileIndex].DIR_FirstClusterHigh);
+    // fseek to that to either high or low cluster
+    fseek(file, dir[fileIndex].DIR_FirstClusterLow, SEEK_SET);
+    
   }else{
     printf("%s\n", "File not found.");
   }
