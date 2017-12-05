@@ -83,6 +83,7 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
 void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName);
 void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCleanName, char* userOriginalName);
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes);
+void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat);
 
 int main()
 {
@@ -205,7 +206,24 @@ int main()
       }
     }
     else if (strcmp(token[0], "cd") == 0) {
-     
+      char * cleanFileName = NULL;
+      int fileIndex;
+      cleanFileName = formatFileString(token[1]);
+
+      if (IMG != NULL) {
+        if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
+          //printf("%d", fileIndex);
+          if (dir[fileIndex].DIR_Attr == 0x10) {
+            //printf("%s", dir[fileIndex].DIR_Name);
+            readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+          }else{
+            printf("Error: Not a valid folder");
+          }
+        }
+      } else {
+        printf("%s\n", "Error: File system not open");
+      }
+
     }
     else if (strcmp(token[0], "ls") == 0) {
      if(IMG != NULL){
@@ -454,7 +472,7 @@ char* formatFileString(char* userInput) {
   char *token;
   char *toFATStr;
   int numOfSpaces;
-  int numOfExtSpaces;
+  int numOfExtSpaces = 3;
   char * del = ".\n";
   // malloc the str to compare to the file system
   // 11 bytes total
@@ -463,21 +481,26 @@ char* formatFileString(char* userInput) {
   token = strtok(copyOfUser,del);
   filename = (char *)malloc(sizeof(token));
   strcpy(filename, token);
-
+  int lenOfExtension;
   if((token = strtok(NULL, del)) != NULL){
     extension = (char *)malloc(sizeof(token));
     strcpy(extension, token);
+    lenOfExtension = strlen(extension);
+    numOfExtSpaces = 3 - lenOfExtension;
+  } else {
+    extension = (char *)malloc(sizeof(0));
+    extension = "";
+    numOfExtSpaces = 3;
   }
   
   // 8 bytes in a file name, take the range
   int lenOfFilename = strlen(filename);
-  int lenOfExtension = strlen(extension);
+  
   numOfSpaces = 8 - lenOfFilename;
-  numOfExtSpaces = 3 - lenOfExtension;
-
+  
+  printf("%s", toFATStr);
   // Concat the file name to our str
   strcat(toFATStr, filename);
-
   // if we have to append spaces
   if(numOfSpaces > 0){
     int i = 0;
@@ -486,10 +509,10 @@ char* formatFileString(char* userInput) {
       strcat(toFATStr, " ");
     }
   }
-  
+
   // then concat file extension
   strcat(toFATStr, extension);
-
+ 
   if(numOfExtSpaces > 0){
     int i = 0;
     // concat spaces to match fat spec
@@ -520,4 +543,14 @@ int fileDoesExist(struct DirectoryEntry *dir, char* filename){
     }
   }
   return -1; // it doesnt exist
+}
+
+void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat) {
+  int offset = LBAToOffset(cluster, fat);
+  fseek(file, offset, SEEK_SET);
+  int i;
+  // fread 32 bytes into the directory entry array
+  for(i=0; i<16; i++){
+    fread(&dir[i], 32, 1, file);
+  }
 }
