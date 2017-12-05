@@ -238,7 +238,7 @@ int main()
     }
     else if (strcmp(token[0], "volume") == 0) {
       if(IMG != NULL){
-        printf("%s\n", fat->BS_VolLab);
+        printf("*%s*\n", fat->BS_VolLab);
         
       }else {
         printf("%s\n", "Error: volume name not found.");
@@ -303,7 +303,8 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
 
   // BS_VolLab
   fseek(file, 71, SEEK_SET);
-  fread(&img->BS_VolLab, 11, 1, file);
+  fread(img->BS_VolLab, 11, 1, file);
+  
 
   // BPB_RootEntCnt
   fseek(file, 17, SEEK_SET);
@@ -311,7 +312,7 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
 
   // BPB_RootClus
   fseek(file, 44, SEEK_SET);
-  fread(&img->BPB_RootEntCnt, 4, 1, file);
+  fread(&img->BPB_RootEntCnt, 2, 1, file);
 
   // Defaults from pdf
   img->RootDirSectors = 0;
@@ -337,7 +338,10 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes){
   int user_offset = offset;
   int block = dir.DIR_FirstClusterLow;
-  //printf("block: %d", block);
+  printf("block: %d", block);
+  int file_offset = LBAToOffset(block, fat);
+  fseek(file, user_offset, SEEK_SET);
+  
   int value;
 
   while( user_offset > fat->BPB_BytsPerSec){
@@ -346,7 +350,7 @@ void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offs
     //printf("block:%2d, user_offset:%2d\n", block, user_offset);
   }
 
-  int file_offset = LBAToOffset(block, fat);
+  file_offset = LBAToOffset(block, fat);
   printf("file_offset:%d\n", file_offset);
   fseek(file, file_offset + user_offset, SEEK_SET);
   fread(&value, numOfBytes, 1, file);
@@ -379,7 +383,10 @@ void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
     // Print out more information
     // TODO
     printf("%d %d\n", dir[fileIndex].DIR_FileSize, dir[fileIndex].DIR_FirstClusterLow);
-  }else{
+    printf("%d\n", dir[fileIndex].DIR_Attr);
+    printf("%d\n", dir[fileIndex].DIR_FirstClusterHigh);
+  
+  } else {
     printf("%s\n", "File not found.");
   }
 }
@@ -404,10 +411,10 @@ void get(FILE *file, struct DirectoryEntry *dir, char* userCleanName, char* user
   }
 }
 
-
 /*
 * Helper functions
 */
+
 int LBAToOffset(int sector, struct FAT32 *fat){
   return ((sector - 2) * fat->BPB_BytsPerSec) + (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (fat->BPB_NumFATS * fat->BPB_FATSz32 * fat->BPB_BytsPerSec);
 }
