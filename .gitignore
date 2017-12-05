@@ -2,3 +2,6 @@ fat32.img
 mfs
 class
 class.c
+*.txt
+*.pdf
+a.out.*

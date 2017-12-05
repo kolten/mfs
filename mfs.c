@@ -81,7 +81,7 @@ int fileDoesExist(struct DirectoryEntry *dir, char* filename);
 FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
 void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName);
-void get(FILE *file, struct DirectoryEntry *dir, char* userCleanName, char* userOriginalName);
+void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCleanName, char* userOriginalName);
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes);
 
 int main()
@@ -199,7 +199,7 @@ int main()
      if(IMG != NULL){
         char *clean = NULL;
         clean = formatFileString(token[1]);
-        get(IMG, dir, clean, token[1]);
+        get(IMG, dir, fat, clean, token[1]);
       }else{
         printf("%s\n", "Error: File system not open.");
       }
@@ -384,7 +384,7 @@ void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
   }
 }
 
-void get(FILE *file, struct DirectoryEntry *dir, char* userCleanName, char* userOriginalName){
+void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCleanName, char* userOriginalName){
   // fseek to that to either high or low cluster
   // fread by the size of the file
   // open a new file pointer to our system
@@ -394,10 +394,26 @@ void get(FILE *file, struct DirectoryEntry *dir, char* userCleanName, char* user
   if((fileIndex = fileDoesExist(dir, userCleanName)) != -1){
     // if it does
     FILE *localFile;
+    int nextCluster;
     localFile = fopen(userOriginalName, "w");
-    printf("%x %x\n", dir[fileIndex].DIR_FirstClusterLow, dir[fileIndex].DIR_FirstClusterHigh);
-    // fseek to that to either high or low cluster
-    fseek(file, dir[fileIndex].DIR_FirstClusterLow, SEEK_SET);
+    int size = dir[fileIndex].DIR_FileSize;
+    int cluster = dir[fileIndex].DIR_FirstClusterLow;
+    int offset = LBAToOffset(cluster, fat);
+
+    fseek(file, offset, SEEK_SET);
+    nextCluster = cluster;
+    uint8_t value[512];
+    while(size > 512){
+      fread(&value, 512, 1, file);
+      fwrite(&value, 512, 1, localFile);
+      size -= 512;
+      nextCluster = NextLB(nextCluster, file, fat);
+      fseek(file, LBAToOffset(nextCluster, fat), SEEK_SET);
+    }
+
+    fread(&value, size, 1, file);
+    fwrite(&value, size, 1, localFile);
+    fclose(localFile);
     
   }else{
     printf("%s\n", "File not found.");
