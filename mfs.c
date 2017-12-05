@@ -336,30 +336,12 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
 }
 
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes){
-  int user_offset = offset;
-  int block = dir.DIR_FirstClusterLow;
-  printf("block: %d", block);
-  int file_offset = LBAToOffset(block, fat);
-  fseek(file, user_offset, SEEK_SET);
-  
-  int value;
-
-  while( user_offset > fat->BPB_BytsPerSec){
-    block = NextLB(block, file, fat);
-    user_offset -= (fat->BPB_BytsPerSec);
-    //printf("block:%2d, user_offset:%2d\n", block, user_offset);
-  }
-
-  file_offset = LBAToOffset(block, fat);
-  printf("file_offset:%d\n", file_offset);
-  fseek(file, file_offset + user_offset, SEEK_SET);
-  fread(&value, numOfBytes, 1, file);
-  printf("%d\n", value);
-  int i = 0;
-  // TODO
-  for(i = 1; i < 10; i++){
-    fread(&value, 1, 1, file);
-    printf("%d\n", value);
+  int userOffset = offset;
+  int cluster = dir.DIR_FirstClusterLow;
+ 
+  while(userOffset > fat->BPB_BytsPerSec){
+     cluster = NextLB(cluster, file, fat);
+     userOffset -= fat->BPB_BytsPerSec;
   }
 }
 
