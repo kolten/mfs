@@ -161,6 +161,7 @@ int main()
         IMG = openFile(token[1], fat, dir);
         // we have an open file, set it as our current file
         if(IMG != NULL){
+          hasFileClosed = 0;
           currentFile = (char *)malloc(sizeof(token[1]));
           strcpy(currentFile, token[1]);
         }
@@ -175,17 +176,22 @@ int main()
       // 0 is success
       // -1 is failed
       // If the file pointer is not null
-      if(IMG != NULL){
-        int res = fclose(IMG);
-        // printf("%d\n", res);
-        if(res == 0){
-          // Reset the current filename && file pointer to null
-          currentFile = NULL;
-          IMG = NULL;
-          // Set a flag for checking on other operations
+      if(hasFileClosed != 1){
+        if(IMG != NULL){
+          int res = fclose(IMG);
+          // printf("%d\n", res);
+          if(res == 0){
+            // Reset the current filename && file pointer to null
+            currentFile = NULL;
+            IMG = NULL;
+            hasFileClosed = 1;
+            // Set a flag for checking on other operations
+          }
+        }else{
+          printf("%s\n", "Error: File system not open.");
         }
       }else{
-        printf("%s\n", "Error: File system not open.");
+        printf("%s\n", "Error: File system image must be opened first.");
       }
     }
     else if (strcmp(token[0], "info") == 0){
@@ -264,6 +270,7 @@ int main()
 
     } // ls Function
     else if (strcmp(token[0], "ls") == 0) {
+      if(IMG != NULL){ 
       int fileIndex;
       int directoryDepth = 0;
       char * cleanFileName = NULL;
@@ -273,7 +280,7 @@ int main()
       char * del = (char *)"/";
       int i = 0;
       int maxTokenCount = 0;
-      int j= 0;
+      int j = 0;
       if (token[1] != NULL ) {
         char buffer[strlen(token[1])];
         strcpy(buffer, token[1]);
@@ -293,40 +300,31 @@ int main()
           else {
             directoryDepth++;
           } 
+          
           maxTokenCount++;
         }
       } 
-
-
-      if(IMG != NULL){ 
         if ( maxTokenCount != 0 ) {
           for ( i = 0; i < maxTokenCount; i++ ) {
           cleanFileName = formatFileString(fileTokens[i]);
           
-          if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
-            if (dir[fileIndex].DIR_Attr == 0x10) {
-              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-            } else if (dir[fileIndex].DIR_Name[0] == '.') {
-              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-            } else {
-              printf("Error: Not a valid folder");
+            if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
+              if (dir[fileIndex].DIR_Attr == 0x10) {
+                readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+              } else if (dir[fileIndex].DIR_Name[0] == '.') {
+                readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+              } else {
+                printf("Error: Not a valid folder");
+              }
+            } 
+          }
+            ls(IMG, fat, dir);
+            for (i = 0; i < directoryDepth; i++){
+              readDirectory(dir[1].DIR_FirstClusterLow, IMG, dir, fat);
             }
-          } 
-        }
-
-        ls(IMG, fat, dir);
-
-        for (i = 0; i < directoryDepth; i++){
-          readDirectory(dir[1].DIR_FirstClusterLow, IMG, dir, fat);
-        }
-          
-        // //printf("%d\n", currentOffset);
-        // readUpDirectory(currentOffset, IMG, dir, fat);
-        // readDirectory(currentOffset, IMG, dir, fat);
-
-        } else {
-          ls(IMG, fat, dir);
-        }
+          }else {
+            ls(IMG, fat, dir);
+          }
       } else {
         printf("%s\n", "Error: File system not open.");
       }
