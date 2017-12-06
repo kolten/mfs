@@ -94,8 +94,10 @@ void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct F
   Returns: integer 0 on exiting
   Description: Main driver function
 */
+
 int main()
 {
+  int currentOffset = 0;
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
   char * currentFile = NULL;
   int hasFileClosed = 0;
@@ -109,6 +111,7 @@ int main()
 
   while( 1 )
   {
+    
     // Print out the msh prompt
     printf ("mfs> ");
 
@@ -243,8 +246,12 @@ int main()
           if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
             if (dir[fileIndex].DIR_Attr == 0x10) {
               readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+              currentOffset = dir[fileIndex].DIR_FirstClusterLow;
+              // printf("%d\n", currentOffset);
             } else if (dir[fileIndex].DIR_Name[0] == '.') {
               readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+              currentOffset = dir[fileIndex].DIR_FirstClusterLow;
+              // printf("%d\n", currentOffset);
             } else {
               printf("Error: Not a valid folder");
             }
@@ -258,25 +265,72 @@ int main()
     } // ls Function
     else if (strcmp(token[0], "ls") == 0) {
       int fileIndex;
+      int directoryDepth = 0;
       char * cleanFileName = NULL;
+      
+      char * fileToken;
+      char * fileTokens[50];
+      char * del = (char *)"/";
+      int i = 0;
+      int maxTokenCount = 0;
+      int j= 0;
+      if (token[1] != NULL ) {
+        char buffer[strlen(token[1])];
+        strcpy(buffer, token[1]);
+        fileToken = strtok ( buffer, del);
+
+        while (fileToken != NULL) {
+          // printf("%s\n", fileToken );
+          fileTokens[maxTokenCount] = (char *)malloc(sizeof(strlen(fileToken)));
+          strcpy(fileTokens[maxTokenCount], fileToken);
+          // printf("%s\n", fileTokens[maxTokenCount] );
+          fileToken = strtok(NULL, del);
+          if (strcmp(fileTokens[maxTokenCount], "..") == 0) {
+            directoryDepth--;
+          } else if  (strcmp(fileTokens[maxTokenCount], ".") == 0) {
+            j++;
+          }
+          else {
+            directoryDepth++;
+          } 
+          maxTokenCount++;
+        }
+      } 
+
 
       if(IMG != NULL){ 
-        if (token[1] != NULL ) {
-          cleanFileName = formatFileString(token[1]);
+        if ( maxTokenCount != 0 ) {
+          for ( i = 0; i < maxTokenCount; i++ ) {
+          cleanFileName = formatFileString(fileTokens[i]);
+          
           if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
-              if (dir[fileIndex].DIR_Attr == 0x10) {
-                readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-                ls(IMG, fat, dir);
-                readDirectory(dir[1].DIR_FirstClusterLow, IMG, dir, fat);
-              }
-          }
+            if (dir[fileIndex].DIR_Attr == 0x10) {
+              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+            } else if (dir[fileIndex].DIR_Name[0] == '.') {
+              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+            } else {
+              printf("Error: Not a valid folder");
+            }
+          } 
+        }
+
+        ls(IMG, fat, dir);
+
+        for (i = 0; i < directoryDepth; i++){
+          readDirectory(dir[1].DIR_FirstClusterLow, IMG, dir, fat);
+        }
+          
+        // //printf("%d\n", currentOffset);
+        // readUpDirectory(currentOffset, IMG, dir, fat);
+        // readDirectory(currentOffset, IMG, dir, fat);
+
         } else {
           ls(IMG, fat, dir);
         }
-      } else{
-          printf("%s\n", "Error: File system not open.");
-        }
+      } else {
+        printf("%s\n", "Error: File system not open.");
       }
+    }
     else if (strcmp(token[0], "read") == 0) {
       int offset;
       int numOfBytes;
@@ -566,12 +620,6 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
 */
 
 /*
-<<<<<<< HEAD
-  Function name: 
-  Params:
-  Returns:
-  Description:
-=======
   Function name: LBAToOffset
   Params: 
   sector - Current sector number that points to a block of data
@@ -579,19 +627,12 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
   Returns: The value of the address for that block of data
   Description: Finds the starting address of a block of data given the
   sector number
->>>>>>> 885f856e7ea2b762e12b78669869528466a278a4
 */
 int LBAToOffset(int sector, struct FAT32 *fat){
   return ((sector - 2) * fat->BPB_BytsPerSec) + (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (fat->BPB_NumFATS * fat->BPB_FATSz32 * fat->BPB_BytsPerSec);
 }
 
 /*
-<<<<<<< HEAD
-  Function name: 
-  Params:
-  Returns:
-  Description:
-=======
   Function name: NextLB
   Params: 
   sector - Current sector number that points to a block of data
@@ -601,7 +642,6 @@ int LBAToOffset(int sector, struct FAT32 *fat){
   Description: Given the logical block address, look up into the first FAT
   and return its logical block address. If there is no further blocks
   then return -1
->>>>>>> 885f856e7ea2b762e12b78669869528466a278a4
 */
 unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
   int FATAddress = (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (sector * 4);
