@@ -226,14 +226,19 @@ int main()
     else if (strcmp(token[0], "cd") == 0) {
       char * cleanFileName = NULL;
       int fileIndex;
+      
       char * del = (char *)"/";
       char buffer[strlen(token[1])];
       char * fileToken;
       char * fileTokens[50];
+      
+      // Buffer for tonization
       strcpy(buffer, token[1]);
+      
       int i = 0;
       int maxTokenCount = 0;
       
+      // tokenize the string after "cd" was entered
       fileToken = strtok ( buffer, del);
       while (fileToken != NULL) {
         fileTokens[maxTokenCount] = (char *)malloc(sizeof(strlen(fileToken)));
@@ -244,18 +249,22 @@ int main()
 
 
       if (IMG != NULL) {
+        // For each directory taken out of token[1]
+        // cd into the directory
         for ( i = 0; i < maxTokenCount; i++ ) {
+          // change the user string a fat32 recognizable string 
           cleanFileName = formatFileString(fileTokens[i]);
-          
+          // get the file index if the files exsists
           if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
-            if (dir[fileIndex].DIR_Attr == 0x10) {
+            // if the folder is a valid directory (0x10) read the directory
+            if (dir[fileIndex].DIR_Attr == 0x10) { 
               readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
               currentOffset = dir[fileIndex].DIR_FirstClusterLow;
-              // printf("%d\n", currentOffset);
+              
             } else if (dir[fileIndex].DIR_Name[0] == '.') {
               readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
               currentOffset = dir[fileIndex].DIR_FirstClusterLow;
-              // printf("%d\n", currentOffset);
+              
             } else {
               printf("Error: Not a valid folder");
             }
@@ -278,22 +287,27 @@ int main()
       char * del = (char *)"/";
       int i = 0;
       int maxTokenCount = 0;
-      int j = 0;
+      int  dotCounts= 0;
+      // For folders, relative paths, and absolute paths
       if (token[1] != NULL ) {
         char buffer[strlen(token[1])];
         strcpy(buffer, token[1]);
         fileToken = strtok ( buffer, del);
 
+        // tokenize the user's input deliminated by '/' and add 
+        // and array of strings
         while (fileToken != NULL) {
-          // printf("%s\n", fileToken );
+          
           fileTokens[maxTokenCount] = (char *)malloc(sizeof(strlen(fileToken)));
           strcpy(fileTokens[maxTokenCount], fileToken);
-          // printf("%s\n", fileTokens[maxTokenCount] );
+          
           fileToken = strtok(NULL, del);
+          // This finds how far in the directory the ls goes
+          // so we can go back up to that location after ls
           if (strcmp(fileTokens[maxTokenCount], "..") == 0) {
             directoryDepth--;
           } else if  (strcmp(fileTokens[maxTokenCount], ".") == 0) {
-            j++;
+            dotCounts++;
           }
           else {
             directoryDepth++;
@@ -302,7 +316,9 @@ int main()
           maxTokenCount++;
         }
       } 
+        // For folders, relative paths, and absolute paths
         if ( maxTokenCount != 0 ) {
+          // cd down into each folder until getting to the specific folder the user wants
           for ( i = 0; i < maxTokenCount; i++ ) {
           cleanFileName = formatFileString(fileTokens[i]);
           
@@ -316,11 +332,15 @@ int main()
               }
             } 
           }
+          // list out files and directories in the user's specified folder
             ls(IMG, fat, dir);
+
+          // Go back up to where the user was
             for (i = 0; i < directoryDepth; i++){
               readDirectory(dir[1].DIR_FirstClusterLow, IMG, dir, fat);
             }
-          }else {
+
+          }else { // If user just types "ls" show directories and files for their current path
             ls(IMG, fat, dir);
           }
       } else {
