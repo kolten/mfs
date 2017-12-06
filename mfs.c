@@ -211,7 +211,7 @@ int main()
     else if (strcmp(token[0], "cd") == 0) {
       char * cleanFileName = NULL;
       int fileIndex;
-      char * del = "/";
+      char * del = (char *)"/";
       char buffer[strlen(token[1])];
       char * fileToken;
       char * fileTokens[50];
@@ -504,17 +504,17 @@ char* formatFileString(char* userInput) {
   char *toFATStr;
   int numOfSpaces;
   int numOfExtSpaces = 3;
-  char * del = ".\n";
+  char * del = (char *) ".\n";
   // malloc the str to compare to the file system
   // 11 bytes total
   
   toFATStr = (char*)malloc(sizeof(char) * 11);
   
   if ( copyOfUser[0] == '.' && copyOfUser[1] == '.'){
-    toFATStr = "..         ";
+    toFATStr = (char *) "..         ";
      
   } else if ( copyOfUser[0] == '.' ) {
-    toFATStr = ".          ";
+    toFATStr = (char *) ".          ";
   }
   else {
     token = strtok(copyOfUser,del);
@@ -528,7 +528,7 @@ char* formatFileString(char* userInput) {
       numOfExtSpaces = 3 - lenOfExtension;
     } else {
       extension = (char *)malloc(sizeof(0));
-      extension = "";
+      extension = (char *) "";
       numOfExtSpaces = 3;
     }
     
