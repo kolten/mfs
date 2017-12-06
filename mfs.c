@@ -242,7 +242,6 @@ int main()
           
           if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
             if (dir[fileIndex].DIR_Attr == 0x10) {
-              // printf("%s", dir[fileIndex].DIR_Name);
               readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
             } else if (dir[fileIndex].DIR_Name[0] == '.') {
               readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
@@ -256,14 +255,28 @@ int main()
       }
       
 
-    }
+    } // ls Function
     else if (strcmp(token[0], "ls") == 0) {
-     if(IMG != NULL){
-       ls(IMG, fat, dir);
-     }else{
-        printf("%s\n", "Error: File system not open.");
+      int fileIndex;
+      char * cleanFileName = NULL;
+
+      if(IMG != NULL){ 
+        if (token[1] != NULL ) {
+          cleanFileName = formatFileString(token[1]);
+          if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
+              if (dir[fileIndex].DIR_Attr == 0x10) {
+                readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+                ls(IMG, fat, dir);
+                readDirectory(dir[1].DIR_FirstClusterLow, IMG, dir, fat);
+              }
+          }
+        } else {
+          ls(IMG, fat, dir);
+        }
+      } else{
+          printf("%s\n", "Error: File system not open.");
+        }
       }
-    }
     else if (strcmp(token[0], "read") == 0) {
       int offset;
       int numOfBytes;
@@ -517,7 +530,7 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
 */
 
 /*
-  Function name:
+  Function name: 
   Params:
   Returns:
   Description:
@@ -527,7 +540,7 @@ int LBAToOffset(int sector, struct FAT32 *fat){
 }
 
 /*
-  Function name:
+  Function name: 
   Params:
   Returns:
   Description:
@@ -543,45 +556,61 @@ unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
 
 // sanitizer user input to match FAT file system spec
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: formatFileString
+  Params: the user's input
+  Returns: the new FAT32 string 
+  Description: sanitizer user input to match FAT file system spec
 */
 char* formatFileString(char* userInput) {
   char copyOfUser[strlen(userInput)];
   // Create a copy to tokenize so we
   // don't change the pointer
   strcpy(copyOfUser, userInput);
+  // Users filename and extension inputted
   char *filename;
   char *extension;
+  
   char *token;
   char *toFATStr;
+  // 11 bytes total for formatted fat string
+  toFATStr = (char*)malloc(sizeof(char) * 11);
+  
+   char * del = (char *) ".\n";
+
   int numOfSpaces;
   int numOfExtSpaces = 3;
-  char * del = (char *) ".\n";
+ 
   // malloc the str to compare to the file system
   // 11 bytes total
   
-  toFATStr = (char*)malloc(sizeof(char) * 11);
-  
+  // If the user inputs ".." or "." no tokenization is needed
+  // just return this with extra spaces  "..         "
   if ( copyOfUser[0] == '.' && copyOfUser[1] == '.'){
     toFATStr = (char *) "..         ";
      
   } else if ( copyOfUser[0] == '.' ) {
     toFATStr = (char *) ".          ";
-  }
-  else {
+
+  } else { // This is the tokenization part.
+    
+    // First gets the user's filename inputted
     token = strtok(copyOfUser,del);
     filename = (char *)malloc(sizeof(token));
     strcpy(filename, token);
+
+    // We check if there is an extension or not 
     int lenOfExtension;
-    if((token = strtok(NULL, del)) != NULL){
+    // If there is an extension we allocate memory for it 
+    // and find the amount of padded spaces we need if the
+    // extension is not 3 characters long
+    if((token = strtok(NULL, del)) != NULL) {
       extension = (char *)malloc(sizeof(token));
       strcpy(extension, token);
       lenOfExtension = strlen(extension);
       numOfExtSpaces = 3 - lenOfExtension;
     } else {
+      // If there is not extension there will be
+      // three blank spaces
       extension = (char *)malloc(sizeof(0));
       extension = (char *) "";
       numOfExtSpaces = 3;
@@ -592,7 +621,6 @@ char* formatFileString(char* userInput) {
     
     numOfSpaces = 8 - lenOfFilename;
     
-    // printf("%s", toFATStr);
     // Concat the file name to our str
     strcat(toFATStr, filename);
     // if we have to append spaces
@@ -626,10 +654,11 @@ char* formatFileString(char* userInput) {
 }
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: fileDoesExist
+  Params: Directory Array of Structs (all the directories), and a filename string
+  Returns: If found index of the directory if not found -1
+  Description: Checks if an inputted file is in the directory. It will show only archived (0x10) 
+               subdirectory (0x20) and archieved (0x10) and if the first character in the directory is a '.'
 */
 int fileDoesExist(struct DirectoryEntry *dir, char* filename){
   int i = 0;
@@ -648,10 +677,10 @@ int fileDoesExist(struct DirectoryEntry *dir, char* filename){
 }
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: readDirectory
+  Params: ClusterLow of Directory, File pointer, all the directories, and a FAT32 struct
+  Returns: Nothing
+  Description: Cds into a directory 
 */
 void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat) {
   int offset;
@@ -660,7 +689,6 @@ void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct F
   } else {
     offset = LBAToOffset(cluster, fat);
   }
-  // int offset = LBAToOffset(cluster, fat);
   fseek(file, offset, SEEK_SET);
   int i;
   // fread 32 bytes into the directory entry array
