@@ -213,19 +213,16 @@ int main()
       int fileIndex;
       char * del = "/";
       char buffer[strlen(token[1])];
-      // cleanFileName = formatFileString(token[1]);
       char * fileToken;
       char * fileTokens[50];
       strcpy(buffer, token[1]);
       int i = 0;
       int maxTokenCount = 0;
-      fileToken = strtok ( buffer, del);
       
+      fileToken = strtok ( buffer, del);
       while (fileToken != NULL) {
         fileTokens[maxTokenCount] = (char *)malloc(sizeof(strlen(fileToken)));
         strcpy(fileTokens[maxTokenCount], fileToken);
-        printf("%s\n", fileTokens[maxTokenCount]);
-        
         fileToken = strtok(NULL, del);
         maxTokenCount++;
       }
@@ -234,7 +231,7 @@ int main()
       if (IMG != NULL) {
         for ( i = 0; i < maxTokenCount; i++ ) {
           cleanFileName = formatFileString(fileTokens[i]);
-          printf("%s\n", cleanFileName);
+          
           if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
             if (dir[fileIndex].DIR_Attr == 0x10) {
               // printf("%s", dir[fileIndex].DIR_Name);
@@ -420,7 +417,7 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
     signed char firstByteOfDIRName=  dir[i].DIR_Name[0];
     if (  firstByteOfDIRName == (char)0xe5  ) {
       int j = 1; 
-    } else if (dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20 || dir[i].DIR_Attr == 0x01 )  {
+    } else if (dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20 || dir[i].DIR_Attr == 0x01 ||  dir[i].DIR_Name[0] == '.')  {
       
       // temp char array for name
       char fileName[12];
