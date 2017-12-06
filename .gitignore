@@ -5,3 +5,4 @@ class.c
 *.txt
 *.pdf
 a.out.*
+*.out
