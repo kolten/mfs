@@ -20,6 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+/*
+  Mary Huerta
+  1001244019
+  Kolten Sturgill
+  1001089599
+
+  Compling
+  g++ mfs.c -o mfs
+*/
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -203,8 +213,6 @@ int main()
           printf("BPB_NumFATS:%9d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
           printf("BPB_FATSz32:%9d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
         }
-      }else{
-        printf("%s\n", "Error: File system not open.");
       }
     }
     else if (strcmp(token[0], "stat") == 0){
@@ -214,8 +222,6 @@ int main()
           clean = formatFileString(token[1]);
           stat(dir, IMG, clean);
         }
-      }else{
-        printf("%s\n", "Error: File system not open.");
       }
     }
     else if (strcmp(token[0], "get") == 0){
@@ -225,8 +231,6 @@ int main()
           clean = formatFileString(token[1]);
           get(IMG, dir, fat, clean, token[1]);
         }
-      }else{
-        printf("%s\n", "Error: File system not open.");
       }
     }
     // cd Function : Change directory in Fat32.img
@@ -272,16 +276,10 @@ int main()
               readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
               currentOffset = dir[fileIndex].DIR_FirstClusterLow;
               
-            } else {
-              printf("Error: Not a valid folder");
             }
           } 
         }
-      } else {
-        printf("%s\n", "Error: File system not open");
       }
-      
-
     } // ls Function
     else if (strcmp(token[0], "ls") == 0) {
       if(IMG != NULL){ 
@@ -334,8 +332,6 @@ int main()
                 readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
               } else if (dir[fileIndex].DIR_Name[0] == '.') {
                 readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-              } else {
-                printf("Error: Not a valid folder");
               }
             } 
           }
@@ -350,8 +346,6 @@ int main()
           }else { // If user just types "ls" show directories and files for their current path
             ls(IMG, fat, dir);
           }
-      } else {
-        printf("%s\n", "Error: File system not open.");
       }
     }
     else if (strcmp(token[0], "read") == 0) {
@@ -369,8 +363,6 @@ int main()
             // We now have the index of the file in the directory structure
             // printf("dir.DIR_FirstClusterLow: %d\n", dir[fileIndex].DIR_FirstClusterLow);
             readFile(IMG, fat, dir[fileIndex], offset, numOfBytes);
-          }else{
-            printf("%s\n", "File not found.");
           }
         }
       }
@@ -388,11 +380,9 @@ int main()
         }else{
           printf("%s\n", "Error: volume name not found.");
         }
-      }else {
-        printf("%s\n", "Error: File system not open.");
       }
     }
-    
+
     free( working_root );
   }
   return 0;
@@ -426,33 +416,27 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   fseek(file, 11, SEEK_SET);
   // read the value into the pointer to the struct
   fread(&img->BPB_BytsPerSec, 2, 1, file);
-  // DEBUG - delete before turning in
-  // printf("%d %x\n", img->BPB_BytsPerSec, img->BPB_BytsPerSec);
+
   // 2. BPB_SecPerClus, at offset 13
   fseek(file, 13, SEEK_SET);
   // ...repeat
   fread(&img->BPB_SecPerClus, 1, 1, file);
-  // DEBUG - delete before turning in
-  // printf("%d %x\n", img->BPB_SecPerClus, img->BPB_SecPerClus);
+
   // 3. BPB_RsvdSecCnt, at offset 14
   fseek(file, 14, SEEK_SET);
   // ...repeat
   fread(&img->BPB_RsvdSecCnt, 2, 1, file);
-  // DEBUG - delete before turning in
-  // printf("%d %x\n", img->BPB_RsvdSecCnt, img->BPB_RsvdSecCnt);
+
   // 4. BPB_NumFATs, at offset 16
   fseek(file, 16, SEEK_SET);
   // ...repeat
   fread(&img->BPB_NumFATS, 1, 1, file);
-  // DEBUG - delete before turning in
-  // printf("%d %x\n", img->BPB_NumFATS, img->BPB_NumFATS);
+ 
   // 5. BPB_FATSz32, at offset 36
   fseek(file, 36, SEEK_SET);
   // ...repeat
   fread(&img->BPB_FATSz32, 4, 1, file);
-  // DEBUG - delete before turning in
-  // printf("%d %x\n", img->BPB_FATSz32, img->BPB_FATSz32);
-
+  
   // ...Others we didn't cover in class?
   // BS_OEMNAME
   fseek(file, 3, SEEK_SET);
@@ -462,7 +446,6 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   fseek(file, 71, SEEK_SET);
   fread(img->BS_VolLab, 11, 1, file);
   
-
   // BPB_RootEntCnt
   fseek(file, 17, SEEK_SET);
   fread(&img->BPB_RootEntCnt, 2, 1, file);
