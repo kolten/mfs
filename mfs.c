@@ -215,30 +215,41 @@ int main()
       char buffer[strlen(token[1])];
       // cleanFileName = formatFileString(token[1]);
       char * fileToken;
-      char * fileTokens [50];
+      char * fileTokens[50];
       strcpy(buffer, token[1]);
+      int i = 0;
+      int maxTokenCount = 0;
+      fileToken = strtok ( buffer, del);
+      
+      while (fileToken != NULL) {
+        fileTokens[maxTokenCount] = (char *)malloc(sizeof(strlen(fileToken)));
+        strcpy(fileTokens[maxTokenCount], fileToken);
+        printf("%s\n", fileTokens[maxTokenCount]);
+        
+        fileToken = strtok(NULL, del);
+        maxTokenCount++;
+      }
+
 
       if (IMG != NULL) {
-        fileToken = strtok ( buffer, del);
-       
-        while (fileToken != NULL) {
-          printf("%s\n", fileToken);
-          //printf("%s\n", buffer);
-          cleanFileName = formatFileString(fileToken);
-          // printf("%s\n", cleanFileName);
-        //   if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
-        //     if (dir[fileIndex].DIR_Attr == 0x10) {
-        //       // printf("%s", dir[fileIndex].DIR_Name);
-        //       readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-        //     }else {
-        //       printf("Error: Not a valid folder");
-        //     }
-        //   } else {
-        //   printf("%s\n", "Error: File system not open");
-        // }
-        fileToken = strtok(NULL, del);
+        for ( i = 0; i < maxTokenCount; i++ ) {
+          cleanFileName = formatFileString(fileTokens[i]);
+          printf("%s\n", cleanFileName);
+          if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
+            if (dir[fileIndex].DIR_Attr == 0x10) {
+              // printf("%s", dir[fileIndex].DIR_Name);
+              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+            } else if (dir[fileIndex].DIR_Name[0] == '.') {
+              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+            } else {
+              printf("Error: Not a valid folder");
+            }
+          } 
+        }
+      } else {
+        printf("%s\n", "Error: File system not open");
       }
-    }  
+      
 
     }
     else if (strcmp(token[0], "ls") == 0) {
@@ -568,7 +579,7 @@ char* formatFileString(char* userInput) {
 int fileDoesExist(struct DirectoryEntry *dir, char* filename){
   int i = 0;
   for(i=0; i < 16; i++){
-    if(dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20){
+    if(dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20 || dir[i].DIR_Name[0] == '.'){
       // temp char array for name
       char dirFileName[12];
       memset(dirFileName, 0, 12);
