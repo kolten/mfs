@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -93,10 +94,10 @@ int main()
   //Creating file pointer
   FILE *IMG = NULL;
 
-  struct DirectoryEntry *dir = malloc(16 * sizeof(struct DirectoryEntry));
+  struct DirectoryEntry *dir = (struct DirectoryEntry *)malloc(sizeof(struct DirectoryEntry) * 16);
 
   // Create a single instance of image struct
-  struct FAT32 *fat = malloc(sizeof(struct FAT32));
+  struct FAT32 *fat = (struct FAT32 *)malloc(sizeof(struct FAT32));
 
   while( 1 )
   {
@@ -233,26 +234,27 @@ int main()
       }
     }
     else if (strcmp(token[0], "read") == 0) {
-      // TODO: Check if tokens are correct, more defensive programming
-      // Might make another func to help with so
       int offset;
       int numOfBytes;
       char *cleanFileName = NULL;
       // read NUM.txt. 513 1
-      cleanFileName = formatFileString(token[1]);
-      offset = atoi(token[2]);
-      numOfBytes = atoi(token[3]);
-      int fileIndex;
-      if(IMG != NULL){
-        if((fileIndex = fileDoesExist(dir, cleanFileName)) != -1){
-          // We now have the index of the file in the directory structure
-          // printf("dir.DIR_FirstClusterLow: %d\n", dir[fileIndex].DIR_FirstClusterLow);
-          readFile(IMG, fat, dir[fileIndex], offset, numOfBytes);
-        }else{
-          printf("%s\n", "File not found.");
+      if(token[1] != NULL || token[2] != NULL || token[3] != NULL){
+        cleanFileName = formatFileString(token[1]);
+        offset = atoi(token[2]);
+        numOfBytes = atoi(token[3]);
+        int fileIndex;
+        if(IMG != NULL){
+          if((fileIndex = fileDoesExist(dir, cleanFileName)) != -1){
+            // We now have the index of the file in the directory structure
+            // printf("dir.DIR_FirstClusterLow: %d\n", dir[fileIndex].DIR_FirstClusterLow);
+            readFile(IMG, fat, dir[fileIndex], offset, numOfBytes);
+          }else{
+            printf("%s\n", "File not found.");
+          }
         }
-      }      
-      // readOp(IMG, fat, position, filename, numOfBytes);
+      }else{
+        printf("Missing required parameters.\n");
+      }
     }
     else if (strcmp(token[0], "volume") == 0) {
       if(IMG != NULL){
@@ -354,13 +356,27 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
 }
 
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes){
+  uint8_t value;
   int userOffset = offset;
   int cluster = dir.DIR_FirstClusterLow;
+  int fileOffset = LBAToOffset(cluster, fat);
+  fseek(file, fileOffset, SEEK_SET);
+
+  fread(&value, numOfBytes, 1, file);
+  printf("%d", value);
  
-  while(userOffset > fat->BPB_BytsPerSec){
-     cluster = NextLB(cluster, file, fat);
-     userOffset -= fat->BPB_BytsPerSec;
-  }
+  // while(userOffset > fat->BPB_BytsPerSec){
+  //    cluster = NextLB(cluster, file, fat);
+  //    userOffset -= fat->BPB_BytsPerSec;
+  // }
+
+  // fileOffset = LBAToOffset(cluster, fat);
+  // fseek(file, fileOffset + userOffset, SEEK_SET);
+  // int i = 0;
+  // for(i = 0; i < offset; i++){
+  //   fread(&value, 1, 1, file);
+  // }
+  
 }
 
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
@@ -389,9 +405,9 @@ void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
   if((fileIndex = fileDoesExist(dir, userFileName)) != -1){
     // Print out more information
     // TODO
-    printf("%d %d\n", dir[fileIndex].DIR_FileSize, dir[fileIndex].DIR_FirstClusterLow);
-    printf("%d\n", dir[fileIndex].DIR_Attr);
-    printf("%d\n", dir[fileIndex].DIR_FirstClusterHigh);
+    printf("File size:%d FirstClusterLow:%d\n", dir[fileIndex].DIR_FileSize, dir[fileIndex].DIR_FirstClusterLow);
+    printf("Attribute:%d\n", dir[fileIndex].DIR_Attr);
+    printf("ClusterHigh%d\n", dir[fileIndex].DIR_FirstClusterHigh);
   
   } else {
     printf("%s\n", "File not found.");

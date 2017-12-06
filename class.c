@@ -97,9 +97,9 @@ int main(){
   fseek(fp, file_offset + user_offset, SEEK_SET);
   //READ OPERATION!!
   fread(&value, 1, 1, fp);
-  for(i = 1; i < ; i++){
+  for(i = 1; i < 10; i++){
     fread(&value, 1, 1, fp);
-    printf("%d", value);
+    // printf("%d", value);
   }
 
   // STAT
