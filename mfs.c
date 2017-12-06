@@ -158,6 +158,7 @@ int main()
         IMG = openFile(token[1], fat, dir);
         // we have an open file, set it as our current file
         if(IMG != NULL){
+          hasFileClosed = 0;
           currentFile = (char *)malloc(sizeof(token[1]));
           strcpy(currentFile, token[1]);
         }
@@ -172,96 +173,115 @@ int main()
       // 0 is success
       // -1 is failed
       // If the file pointer is not null
-      if(IMG != NULL){
-        int res = fclose(IMG);
-        // printf("%d\n", res);
-        if(res == 0){
-          // Reset the current filename && file pointer to null
-          currentFile = NULL;
-          IMG = NULL;
-          // Set a flag for checking on other operations
+      if (hasFileClosed != 1){
+        if(IMG != NULL){
+          int res = fclose(IMG);
+          // printf("%d\n", res);
+          if(res == 0){
+            // Reset the current filename && file pointer to null
+            currentFile = NULL;
+            IMG = NULL;
+            hasFileClosed = 1;
+            // Set a flag for checking on other operations
+          }
+        }else{
+          printf("%s\n", "Error: File system not open.");
         }
       }else{
-        printf("%s\n", "Error: File system not open.");
+        printf("%s\n", "Error: File system image must be opened first.");
       }
     }
     else if (strcmp(token[0], "info") == 0){
       if(IMG != NULL){
+        if(token[1] != NULL){
         printf("BPB_BytsPerSec:%6d %6x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
         printf("BPB_SecPerClus:%6d %6x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
         printf("BPB_RsvdSecCnt:%6d %6x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
         printf("BPB_NumFATS:%9d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
         printf("BPB_FATSz32:%9d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
-        
+        }else{
+          printf("%s\n", "Error: No file input was given.");
+        }
       }else{
         printf("%s\n", "Error: File system not open.");
       }
-	  }
+    }
     else if (strcmp(token[0], "stat") == 0){
       if(IMG != NULL){
-        char *clean = NULL;
-        clean = formatFileString(token[1]);
-        stat(dir, IMG, clean);
+        if(token[1] != NULL){
+          char *clean = NULL;
+          clean = formatFileString(token[1]);
+          stat(dir, IMG, clean);
+        }else{
+          printf("%s\n", "Error: No file input was given.");
+        }
       }else{
         printf("%s\n", "Error: File system not open.");
       }
     }
     else if (strcmp(token[0], "get") == 0){
      if(IMG != NULL){
-        char *clean = NULL;
-        clean = formatFileString(token[1]);
-        get(IMG, dir, fat, clean, token[1]);
+        if(token[1] != NULL){
+          char *clean = NULL;
+          clean = formatFileString(token[1]);
+          get(IMG, dir, fat, clean, token[1]);
+        }else{
+          printf("%s\n", "Error: No file input was given.");
+        }
       }else{
         printf("%s\n", "Error: File system not open.");
       }
     }
     // cd Function : Change directory in Fat32.img
     else if (strcmp(token[0], "cd") == 0) {
-      char * cleanFileName = NULL;
-      int fileIndex;
-      char * del = (char *)"/";
-      char buffer[strlen(token[1])];
-      char * fileToken;
-      char * fileTokens[50];
-      strcpy(buffer, token[1]);
-      int i = 0;
-      int maxTokenCount = 0;
-      
-      fileToken = strtok ( buffer, del);
-      while (fileToken != NULL) {
-        fileTokens[maxTokenCount] = (char *)malloc(sizeof(strlen(fileToken)));
-        strcpy(fileTokens[maxTokenCount], fileToken);
-        fileToken = strtok(NULL, del);
-        maxTokenCount++;
-      }
-
-
-      if (IMG != NULL) {
-        for ( i = 0; i < maxTokenCount; i++ ) {
-          cleanFileName = formatFileString(fileTokens[i]);
+      if( IMG != NULL){
+        if(token[1] != NULL){
+          char * cleanFileName = NULL;
+          int fileIndex;
+          char * del = (char *)"/";
+          char buffer[strlen(token[1])];
+          char * fileToken;
+          char * fileTokens[50];
+          strcpy(buffer, token[1]);
+          int i = 0;
+          int maxTokenCount = 0;
           
-          if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
-            if (dir[fileIndex].DIR_Attr == 0x10) {
-              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-            } else if (dir[fileIndex].DIR_Name[0] == '.') {
-              readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-            } else {
-              printf("Error: Not a valid folder");
-            }
-          } 
-        }
-      } else {
-        printf("%s\n", "Error: File system not open");
-      }
-      
+          fileToken = strtok ( buffer, del);
+          while (fileToken != NULL) {
+            fileTokens[maxTokenCount] = (char *)malloc(sizeof(strlen(fileToken)));
+            strcpy(fileTokens[maxTokenCount], fileToken);
+            fileToken = strtok(NULL, del);
+            maxTokenCount++;
+          }
 
+
+          //if (IMG != NULL) {
+            for ( i = 0; i < maxTokenCount; i++ ) {
+              cleanFileName = formatFileString(fileTokens[i]);
+              
+              if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
+                if (dir[fileIndex].DIR_Attr == 0x10) {
+                  readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+                } else if (dir[fileIndex].DIR_Name[0] == '.') {
+                  readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+                } else {
+                  printf("Error: Not a valid folder");
+                }
+              } 
+            }
+        }else{
+          printf("%s\n", "Error: No file input was given.");
+        }
+      }else{
+        printf("%s\n", "Error: File system not open.");
+      }
     } // ls Function
     else if (strcmp(token[0], "ls") == 0) {
       int fileIndex;
       char * cleanFileName = NULL;
 
       if(IMG != NULL){ 
-        if (token[1] != NULL ) {
+        if (token[1] != NULL) {
           cleanFileName = formatFileString(token[1]);
           if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
               if (dir[fileIndex].DIR_Attr == 0x10) {
@@ -282,22 +302,26 @@ int main()
       int numOfBytes;
       char *cleanFileName = NULL;
       // read NUM.txt. 513 1
-      if(token[1] != NULL || token[2] != NULL || token[3] != NULL){
-        cleanFileName = formatFileString(token[1]);
-        offset = atoi(token[2]);
-        numOfBytes = atoi(token[3]);
-        int fileIndex;
-        if(IMG != NULL){
-          if((fileIndex = fileDoesExist(dir, cleanFileName)) != -1){
-            // We now have the index of the file in the directory structure
-            // printf("dir.DIR_FirstClusterLow: %d\n", dir[fileIndex].DIR_FirstClusterLow);
-            readFile(IMG, fat, dir[fileIndex], offset, numOfBytes);
-          }else{
-            printf("%s\n", "File not found.");
+      if(IMG != NULL){
+        if(token[1] != NULL || token[2] != NULL || token[3] != NULL){
+          cleanFileName = formatFileString(token[1]);
+          offset = atoi(token[2]);
+          numOfBytes = atoi(token[3]);
+          int fileIndex;
+          if(IMG != NULL){
+            if((fileIndex = fileDoesExist(dir, cleanFileName)) != -1){
+              // We now have the index of the file in the directory structure
+              // printf("dir.DIR_FirstClusterLow: %d\n", dir[fileIndex].DIR_FirstClusterLow);
+              readFile(IMG, fat, dir[fileIndex], offset, numOfBytes);
+            }else{
+              printf("%s\n", "File not found.");
+            }
           }
+        }else{
+          printf("Missing required parameters.\n");
         }
       }else{
-        printf("Missing required parameters.\n");
+        printf("%s\n", "Error: File system not open.");
       }
     }
     else if (strcmp(token[0], "volume") == 0) {
@@ -566,12 +590,6 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
 */
 
 /*
-<<<<<<< HEAD
-  Function name: 
-  Params:
-  Returns:
-  Description:
-=======
   Function name: LBAToOffset
   Params: 
   sector - Current sector number that points to a block of data
@@ -579,19 +597,12 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
   Returns: The value of the address for that block of data
   Description: Finds the starting address of a block of data given the
   sector number
->>>>>>> 885f856e7ea2b762e12b78669869528466a278a4
 */
 int LBAToOffset(int sector, struct FAT32 *fat){
   return ((sector - 2) * fat->BPB_BytsPerSec) + (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (fat->BPB_NumFATS * fat->BPB_FATSz32 * fat->BPB_BytsPerSec);
 }
 
 /*
-<<<<<<< HEAD
-  Function name: 
-  Params:
-  Returns:
-  Description:
-=======
   Function name: NextLB
   Params: 
   sector - Current sector number that points to a block of data
@@ -601,7 +612,6 @@ int LBAToOffset(int sector, struct FAT32 *fat){
   Description: Given the logical block address, look up into the first FAT
   and return its logical block address. If there is no further blocks
   then return -1
->>>>>>> 885f856e7ea2b762e12b78669869528466a278a4
 */
 unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
   int FATAddress = (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (sector * 4);

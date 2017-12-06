@@ -1,5 +1,5 @@
 mfs:
-	gcc mfs.c -o mfs
+	g++ -o mfs mfs.c
 
 class:
 	gcc class.c -o class
