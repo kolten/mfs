@@ -89,10 +89,10 @@ void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offs
 void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat);
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: main
+  Params: none
+  Returns: integer 0 on exiting
+  Description: Main driver function
 */
 int main()
 {
@@ -307,10 +307,19 @@ int main()
 }
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: openFile
+  Params: 
+    fileName - User input filename for the fat32.img, 
+    img - a pointer to the FAT32 stuct 
+    dir - a pointer to the DirectoryEntry struct
+  Returns: FILE pointer
+  Description: This function takes in the user inputted file name
+  and calls fopen in read mode, then moves through the files and
+  reads values at specific byte address from the FAT32 spec into 
+  the FAT32 struct pointer. After filling the FAT32 struct out,
+  we calculate where the user directory files are located, move
+  to that position, and read in the first 16 files/folders, assigning
+  them to the DirectoryEntry struct.
 */
 FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   FILE *file;
@@ -392,10 +401,15 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
 }
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: readFile
+  Params: 
+  file - currently open file pointer
+  fat  - a pointer to the FAT32 stuct 
+  dir  - a pointer to current working directory
+  offset - user input for file offset
+  numOfByes - user input for number of bytes to read by
+  Returns: N/A
+  Description: 
 */
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes){
   uint8_t value;
@@ -422,10 +436,14 @@ void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offs
 }
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: ls
+  Params: 
+  file - current open file pointer
+  fat  - FAT32 struct pointer
+  dir  - a pointer to current working directory
+  Returns: N/A void
+  Description: Lists the current working directory contents in a given path. 
+  Has multiple conditionals for file attributes and for path
 */
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   // files with the archive flag
@@ -450,10 +468,16 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
 }
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: stat
+  Params: 
+  dir  - a pointer to current working directory
+  file - current open file pointer
+  userFileName - user input string for the file name / directory
+  Returns: N/A
+  Description: 
+  Prints the attributes and starting cluster number of the file or directory name.
+  If the file or directory does not exist, it prints an error message
+  “Error: File not found”
 */
 void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
   int fileIndex;
@@ -471,10 +495,17 @@ void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
 }
 
 /*
-  Function name:
+  Function name: get
   Params:
-  Returns:
-  Description:
+  file - current open file pointer
+  fat  - FAT32 struct pointer
+  dir  - a pointer to current working directory
+  userCleanName - santizied user input for FAT32 spec
+  userOriginalName - initial user input, no mutations
+  Returns: N/A
+  Description: Retrieve the file from the FAT 32 image 
+  and places it in the local systems current working directory.
+  If the file does not exist, then an error message is printed.
 */
 void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCleanName, char* userOriginalName){
   // fseek to that to either high or low cluster
@@ -495,6 +526,9 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
     fseek(file, offset, SEEK_SET);
     nextCluster = cluster;
     uint8_t value[512];
+    // the size of the file is larger than 512 bytes
+    // loop through and read, then move to the next
+    // logical block
     while(size > 512){
       fread(&value, 512, 1, file);
       fwrite(&value, 512, 1, localFile);
@@ -503,6 +537,8 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
       fseek(file, LBAToOffset(nextCluster, fat), SEEK_SET);
     }
 
+    // the file size is less than 512 bytes
+    // read and write out.
     fread(&value, size, 1, file);
     fwrite(&value, size, 1, localFile);
     fclose(localFile);
@@ -517,20 +553,28 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
 */
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: LBAToOffset
+  Params: 
+  sector - Current sector number that points to a block of data
+  fat    - pointer to fat32 struct containing values for calculation
+  Returns: The value of the address for that block of data
+  Description: Finds the starting address of a block of data given the
+  sector number
 */
 int LBAToOffset(int sector, struct FAT32 *fat){
   return ((sector - 2) * fat->BPB_BytsPerSec) + (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (fat->BPB_NumFATS * fat->BPB_FATSz32 * fat->BPB_BytsPerSec);
 }
 
 /*
-  Function name:
-  Params:
-  Returns:
-  Description:
+  Function name: NextLB
+  Params: 
+  sector - Current sector number that points to a block of data
+  file   - file pointer to current open file
+  fat    - pointer to fat32 struct containing values for calculation
+  Returns: unsigned interger containing next block address for file
+  Description: Given the logical block address, look up into the first FAT
+  and return its logical block address. If there is no further blocks
+  then return -1
 */
 unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
   int FATAddress = (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (sector * 4);
