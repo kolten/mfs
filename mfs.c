@@ -357,8 +357,17 @@ int main()
     }
     else if (strcmp(token[0], "volume") == 0) {
       if(IMG != NULL){
-        printf("Volume is :%s\n", fat->BS_VolLab);
+        // Volume
+        char * vol;
+        vol = (char *)malloc(sizeof(11));
         
+        // memset(vol, 0, 12);
+        strcpy(vol, fat->BS_VolLab);
+        if( vol != NULL){
+          printf("Volume is :%s\n", vol);
+        }else{
+          printf("%s\n", "Error: volume name not found.");
+        }
       }else {
         printf("%s\n", "Error: File system not open.");
       }
