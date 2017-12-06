@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -143,7 +144,7 @@ int main()
     if ( token[0] == NULL){
       
     }
-
+    // Open function : opens the file
     else if ( strcmp(token[0], "open") == 0){
       if(currentFile == NULL && IMG == NULL){
         IMG = openFile(token[1], fat, dir);
@@ -158,6 +159,7 @@ int main()
         }
       }
     }
+    // CLose Function : Close fat32.img
     else if ( strcmp(token[0], "close") == 0){
       // 0 is success
       // -1 is failed
@@ -182,7 +184,7 @@ int main()
         printf("BPB_RsvdSecCnt:%6d %6x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
         printf("BPB_NumFATS:%9d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
         printf("BPB_FATSz32:%9d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
-        printf("%d\n", fat->root_offset);
+        
       }else{
         printf("%s\n", "Error: File system not open.");
       }
@@ -205,24 +207,38 @@ int main()
         printf("%s\n", "Error: File system not open.");
       }
     }
+    // cd Function : Change directory in Fat32.img
     else if (strcmp(token[0], "cd") == 0) {
       char * cleanFileName = NULL;
       int fileIndex;
-      cleanFileName = formatFileString(token[1]);
+      char * del = "/";
+      char buffer[strlen(token[1])];
+      // cleanFileName = formatFileString(token[1]);
+      char * fileToken;
+      char * fileTokens [50];
+      strcpy(buffer, token[1]);
 
       if (IMG != NULL) {
-        if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
-          //printf("%d", fileIndex);
-          if (dir[fileIndex].DIR_Attr == 0x10) {
-            //printf("%s", dir[fileIndex].DIR_Name);
-            readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
-          }else {
-            printf("Error: Not a valid folder");
-          }
-        }
-      } else {
-        printf("%s\n", "Error: File system not open");
+        fileToken = strtok ( buffer, del);
+       
+        while (fileToken != NULL) {
+          printf("%s\n", fileToken);
+          //printf("%s\n", buffer);
+          cleanFileName = formatFileString(fileToken);
+          // printf("%s\n", cleanFileName);
+        //   if ((fileIndex = fileDoesExist(dir, cleanFileName)) != -1) {
+        //     if (dir[fileIndex].DIR_Attr == 0x10) {
+        //       // printf("%s", dir[fileIndex].DIR_Name);
+        //       readDirectory(dir[fileIndex].DIR_FirstClusterLow, IMG, dir, fat);
+        //     }else {
+        //       printf("Error: Not a valid folder");
+        //     }
+        //   } else {
+        //   printf("%s\n", "Error: File system not open");
+        // }
+        fileToken = strtok(NULL, del);
       }
+    }  
 
     }
     else if (strcmp(token[0], "ls") == 0) {
@@ -256,7 +272,7 @@ int main()
     }
     else if (strcmp(token[0], "volume") == 0) {
       if(IMG != NULL){
-        printf("*%s*\n", fat->BS_VolLab);
+        printf("Volume is :%s\n", fat->BS_VolLab);
         
       }else {
         printf("%s\n", "Error: volume name not found.");
@@ -385,19 +401,21 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   // files with the archive flag
   int i = 0;
   signed char firstByteOfDIRName=  dir[2].DIR_Name[0];
-  
+  // Looks at all 16 directories
   for(i=0; i < 16; i++){
+    
+    // This is bad code vvv
+    // But looks at first character is directory and compares it to 0xe5 in hex
     signed char firstByteOfDIRName=  dir[i].DIR_Name[0];
     if (  firstByteOfDIRName == (char)0xe5  ) {
       int j = 1; 
-    }
-    else if (dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20 || dir[i].DIR_Attr == 0x01 )  {
+    } else if (dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20 || dir[i].DIR_Attr == 0x01 )  {
       
       // temp char array for name
       char fileName[12];
       memset(fileName, 0, 12);
       strncpy(fileName, dir[i].DIR_Name, 11);
-      printf("%2s %6d %6d\n", fileName, dir[i].DIR_FileSize, dir[i].DIR_FirstClusterHigh);
+      printf("%2s\n", fileName);
     } 
   }
 }
@@ -407,9 +425,10 @@ void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
   if((fileIndex = fileDoesExist(dir, userFileName)) != -1){
     // Print out more information
     // TODO
-    printf("%d %d\n", dir[fileIndex].DIR_FileSize, dir[fileIndex].DIR_FirstClusterLow);
-    printf("%d\n", dir[fileIndex].DIR_Attr);
-    printf("%d\n", dir[fileIndex].DIR_FirstClusterHigh);
+    printf("File Size: %d\n", dir[fileIndex].DIR_FileSize);
+    printf("First Cluster Low: %d\n",  dir[fileIndex].DIR_FirstClusterLow);
+    printf("DIR_ATTR: %d\n", dir[fileIndex].DIR_Attr);
+    printf("First Cluster High: %d\n", dir[fileIndex].DIR_FirstClusterHigh);
   
   } else {
     printf("%s\n", "File not found.");
@@ -483,56 +502,66 @@ char* formatFileString(char* userInput) {
   char * del = ".\n";
   // malloc the str to compare to the file system
   // 11 bytes total
+  
   toFATStr = (char*)malloc(sizeof(char) * 11);
   
-  token = strtok(copyOfUser,del);
-  filename = (char *)malloc(sizeof(token));
-  strcpy(filename, token);
-  int lenOfExtension;
-  if((token = strtok(NULL, del)) != NULL){
-    extension = (char *)malloc(sizeof(token));
-    strcpy(extension, token);
-    lenOfExtension = strlen(extension);
-    numOfExtSpaces = 3 - lenOfExtension;
-  } else {
-    extension = (char *)malloc(sizeof(0));
-    extension = "";
-    numOfExtSpaces = 3;
+  if ( copyOfUser[0] == '.' && copyOfUser[1] == '.'){
+    toFATStr = "..         ";
+     
+  } else if ( copyOfUser[0] == '.' ) {
+    toFATStr = ".          ";
   }
-  
-  // 8 bytes in a file name, take the range
-  int lenOfFilename = strlen(filename);
-  
-  numOfSpaces = 8 - lenOfFilename;
-  
-  printf("%s", toFATStr);
-  // Concat the file name to our str
-  strcat(toFATStr, filename);
-  // if we have to append spaces
-  if(numOfSpaces > 0){
-    int i = 0;
-    // concat spaces to match fat spec
-    for(i = 0; i < numOfSpaces; i++){
-      strcat(toFATStr, " ");
+  else {
+    token = strtok(copyOfUser,del);
+    filename = (char *)malloc(sizeof(token));
+    strcpy(filename, token);
+    int lenOfExtension;
+    if((token = strtok(NULL, del)) != NULL){
+      extension = (char *)malloc(sizeof(token));
+      strcpy(extension, token);
+      lenOfExtension = strlen(extension);
+      numOfExtSpaces = 3 - lenOfExtension;
+    } else {
+      extension = (char *)malloc(sizeof(0));
+      extension = "";
+      numOfExtSpaces = 3;
     }
-  }
-
-  // then concat file extension
-  strcat(toFATStr, extension);
- 
-  if(numOfExtSpaces > 0){
-    int i = 0;
-    // concat spaces to match fat spec
-    for(i = 0; i < numOfExtSpaces; i++){
-      strcat(toFATStr, " ");
+    
+    // 8 bytes in a file name, take the range
+    int lenOfFilename = strlen(filename);
+    
+    numOfSpaces = 8 - lenOfFilename;
+    
+    // printf("%s", toFATStr);
+    // Concat the file name to our str
+    strcat(toFATStr, filename);
+    // if we have to append spaces
+    if(numOfSpaces > 0){
+      int i = 0;
+      // concat spaces to match fat spec
+      for(i = 0; i < numOfSpaces; i++){
+        strcat(toFATStr, " ");
+      }
     }
-  }
-  // turn the toFATStr to all caps
-  int i = 0;
-  for(i = 0; i < strlen(toFATStr); i++){
-    toFATStr[i] = toupper(toFATStr[i]);
-  }
 
+    // then concat file extension
+    strcat(toFATStr, extension);
+  
+    if(numOfExtSpaces > 0){
+      int i = 0;
+      // concat spaces to match fat spec
+      for(i = 0; i < numOfExtSpaces; i++){
+        strcat(toFATStr, " ");
+      }
+    }
+    // turn the toFATStr to all caps
+    int i = 0;
+    for(i = 0; i < strlen(toFATStr); i++){
+      toFATStr[i] = toupper(toFATStr[i]);
+    }
+
+    return toFATStr;
+  }
   return toFATStr;
 }
 
@@ -553,7 +582,13 @@ int fileDoesExist(struct DirectoryEntry *dir, char* filename){
 }
 
 void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat) {
-  int offset = LBAToOffset(cluster, fat);
+  int offset;
+  if (cluster == 0) {
+    offset = fat->root_offset;
+  } else {
+    offset = LBAToOffset(cluster, fat);
+  }
+  // int offset = LBAToOffset(cluster, fat);
   fseek(file, offset, SEEK_SET);
   int i;
   // fread 32 bytes into the directory entry array
