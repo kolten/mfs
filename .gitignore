@@ -6,3 +6,4 @@ class.c
 *.pdf
 a.out.*
 *.out
+.vscode
