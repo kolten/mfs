@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
@@ -357,7 +355,7 @@ int main()
         printf("Volume is :%s\n", fat->BS_VolLab);
         
       }else {
-        printf("%s\n", "Error: volume name not found.");
+        printf("%s\n", "Error: File system not open.");
       }
     }
     
