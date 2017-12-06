@@ -41,6 +41,7 @@
 
 #define MAX_NUM_ARGUMENTS 5     // Mav shell only supports five arguments
 
+// Directory struct
 struct __attribute__((__packed__)) DirectoryEntry {
   char DIR_Name[11];
   uint8_t DIR_Attr;
@@ -51,7 +52,7 @@ struct __attribute__((__packed__)) DirectoryEntry {
   uint32_t DIR_FileSize;
 };
 
-// From fat32 pdf
+// fat32 spec struct
 struct FAT32 {
   char BS_OEMNAME[8];
   short BPB_BytsPerSec; // short
@@ -79,6 +80,7 @@ unsigned NextLB(int sector, FILE *file, struct FAT32 *fat);
 char* formatFileString(char* userInput);
 int fileDoesExist(struct DirectoryEntry *dir, char* filename);
 
+// Operations
 FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir);
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir);
 void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName);
@@ -86,6 +88,12 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes);
 void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat);
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 int main()
 {
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
@@ -298,7 +306,12 @@ int main()
   return 0;
 }
 
-
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   FILE *file;
   if(!(file=fopen(fileName, "r"))){
@@ -378,6 +391,12 @@ FILE* openFile(char *fileName, struct FAT32 *img, struct DirectoryEntry *dir){
   return file;
 }
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offset, int numOfBytes){
   uint8_t value;
   int userOffset = offset;
@@ -388,20 +407,26 @@ void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offs
   fread(&value, numOfBytes, 1, file);
   printf("%d", value);
  
-  // while(userOffset > fat->BPB_BytsPerSec){
-  //    cluster = NextLB(cluster, file, fat);
-  //    userOffset -= fat->BPB_BytsPerSec;
-  // }
+  while(userOffset > fat->BPB_BytsPerSec){
+     cluster = NextLB(cluster, file, fat);
+     userOffset -= fat->BPB_BytsPerSec;
+  }
 
-  // fileOffset = LBAToOffset(cluster, fat);
-  // fseek(file, fileOffset + userOffset, SEEK_SET);
-  // int i = 0;
-  // for(i = 0; i < offset; i++){
-  //   fread(&value, 1, 1, file);
-  // }
+  fileOffset = LBAToOffset(cluster, fat);
+  fseek(file, fileOffset + userOffset, SEEK_SET);
+  int i = 0;
+  for(i = 0; i < offset; i++){
+    fread(&value, 1, 1, file);
+  }
   
 }
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   // files with the archive flag
   int i = 0;
@@ -409,13 +434,12 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   // Looks at all 16 directories
   for(i=0; i < 16; i++){
     
-    // This is bad code vvv
-    // But looks at first character is directory and compares it to 0xe5 in hex
+    // Looks at first character is directory and compares it to 0xe5 in hex
     signed char firstByteOfDIRName=  dir[i].DIR_Name[0];
-    if (  firstByteOfDIRName == (char)0xe5  ) {
-      int j = 1; 
-    } else if (dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20 || dir[i].DIR_Attr == 0x01 ||  dir[i].DIR_Name[0] == '.')  {
-      
+    if ( firstByteOfDIRName == (char)0xe5 ) {
+      int j = 1;
+    } 
+    else if (dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20 || dir[i].DIR_Attr == 0x01 ||  dir[i].DIR_Name[0] == '.')  {
       // temp char array for name
       char fileName[12];
       memset(fileName, 0, 12);
@@ -425,6 +449,12 @@ void ls(FILE *file, struct FAT32 *fat, struct DirectoryEntry *dir){
   }
 }
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
   int fileIndex;
   if((fileIndex = fileDoesExist(dir, userFileName)) != -1){
@@ -440,6 +470,12 @@ void stat(struct DirectoryEntry *dir, FILE *file, char* userFileName){
   }
 }
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCleanName, char* userOriginalName){
   // fseek to that to either high or low cluster
   // fread by the size of the file
@@ -480,10 +516,22 @@ void get(FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat, char* userCl
 * Helper functions
 */
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 int LBAToOffset(int sector, struct FAT32 *fat){
   return ((sector - 2) * fat->BPB_BytsPerSec) + (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (fat->BPB_NumFATS * fat->BPB_FATSz32 * fat->BPB_BytsPerSec);
 }
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
   int FATAddress = (fat->BPB_BytsPerSec * fat->BPB_RsvdSecCnt) + (sector * 4);
   unsigned val;
@@ -492,7 +540,14 @@ unsigned NextLB(int sector, FILE *file, struct FAT32 *fat){
   return val;
 }
 
+
 // sanitizer user input to match FAT file system spec
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 char* formatFileString(char* userInput) {
   char copyOfUser[strlen(userInput)];
   // Create a copy to tokenize so we
@@ -570,6 +625,12 @@ char* formatFileString(char* userInput) {
   return toFATStr;
 }
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 int fileDoesExist(struct DirectoryEntry *dir, char* filename){
   int i = 0;
   for(i=0; i < 16; i++){
@@ -586,6 +647,12 @@ int fileDoesExist(struct DirectoryEntry *dir, char* filename){
   return -1; // it doesnt exist
 }
 
+/*
+  Function name:
+  Params:
+  Returns:
+  Description:
+*/
 void readDirectory(int cluster, FILE *file, struct DirectoryEntry *dir, struct FAT32 *fat) {
   int offset;
   if (cluster == 0) {
