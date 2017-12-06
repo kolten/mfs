@@ -393,11 +393,6 @@ int main()
       }
     }
     
-    // DEBUG - delete before turning in
-    else if (strcmp(token[0], "exit") == 0) {
-      return 0;
-    }
-
     free( working_root );
   }
   return 0;
