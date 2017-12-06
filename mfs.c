@@ -156,12 +156,14 @@ int main()
     // Open function : opens the file
     else if ( strcmp(token[0], "open") == 0){
       if(currentFile == NULL && IMG == NULL){
-        IMG = openFile(token[1], fat, dir);
-        // we have an open file, set it as our current file
-        if(IMG != NULL){
-          hasFileClosed = 0;
-          currentFile = (char *)malloc(sizeof(token[1]));
-          strcpy(currentFile, token[1]);
+        if(token[1] != NULL){
+          IMG = openFile(token[1], fat, dir);
+          // we have an open file, set it as our current file
+          if(IMG != NULL){
+            hasFileClosed = 0;
+            currentFile = (char *)malloc(sizeof(token[1]));
+            strcpy(currentFile, token[1]);
+          }
         }
       }else{
         if(strcmp(currentFile, token[1]) == 0){
@@ -194,30 +196,35 @@ int main()
     }
     else if (strcmp(token[0], "info") == 0){
       if(IMG != NULL){
-        printf("BPB_BytsPerSec:%6d %6x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
-        printf("BPB_SecPerClus:%6d %6x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
-        printf("BPB_RsvdSecCnt:%6d %6x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
-        printf("BPB_NumFATS:%9d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
-        printf("BPB_FATSz32:%9d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
-        
+        if(token[1] != NULL){
+          printf("BPB_BytsPerSec:%6d %6x\n", fat->BPB_BytsPerSec, fat->BPB_BytsPerSec);
+          printf("BPB_SecPerClus:%6d %6x\n", fat->BPB_SecPerClus, fat->BPB_SecPerClus);
+          printf("BPB_RsvdSecCnt:%6d %6x\n", fat->BPB_RsvdSecCnt, fat->BPB_RsvdSecCnt);
+          printf("BPB_NumFATS:%9d %6x\n", fat->BPB_NumFATS, fat->BPB_NumFATS);
+          printf("BPB_FATSz32:%9d %6x\n", fat->BPB_FATSz32, fat->BPB_FATSz32);
+        }
       }else{
         printf("%s\n", "Error: File system not open.");
       }
-	  }
+    }
     else if (strcmp(token[0], "stat") == 0){
       if(IMG != NULL){
-        char *clean = NULL;
-        clean = formatFileString(token[1]);
-        stat(dir, IMG, clean);
+          if(token[1] != 0){
+          char *clean = NULL;
+          clean = formatFileString(token[1]);
+          stat(dir, IMG, clean);
+        }
       }else{
         printf("%s\n", "Error: File system not open.");
       }
     }
     else if (strcmp(token[0], "get") == 0){
      if(IMG != NULL){
-        char *clean = NULL;
-        clean = formatFileString(token[1]);
-        get(IMG, dir, fat, clean, token[1]);
+        if(token[1] != NULL){
+          char *clean = NULL;
+          clean = formatFileString(token[1]);
+          get(IMG, dir, fat, clean, token[1]);
+        }
       }else{
         printf("%s\n", "Error: File system not open.");
       }
@@ -346,8 +353,6 @@ int main()
             printf("%s\n", "File not found.");
           }
         }
-      }else{
-        printf("Missing required parameters.\n");
       }
     }
     else if (strcmp(token[0], "volume") == 0) {
@@ -481,8 +486,8 @@ void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offs
   int fileOffset = LBAToOffset(cluster, fat);
   fseek(file, fileOffset, SEEK_SET);
 
-  fread(&value, numOfBytes, 1, file);
-  printf("%d", value);
+  // fread(&value, numOfBytes, 1, file);
+  // printf("%d", value);
  
   while(userOffset > fat->BPB_BytsPerSec){
      cluster = NextLB(cluster, file, fat);
@@ -492,10 +497,11 @@ void readFile(FILE *file, struct FAT32 *fat, struct DirectoryEntry dir, int offs
   fileOffset = LBAToOffset(cluster, fat);
   fseek(file, fileOffset + userOffset, SEEK_SET);
   int i = 0;
-  for(i = 0; i < offset; i++){
+  for(i = 0; i < numOfBytes; i++){
     fread(&value, 1, 1, file);
+    printf("%d", value);
   }
-  
+  printf("\n");
 }
 
 /*
